@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
 	Card,
@@ -11,13 +11,21 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, Info } from "lucide-react";
+import { Download, ExternalLink, Info, Filter } from "lucide-react";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import LoadingIndicator from "@/components/ui-elements/LoadingIndicator";
 import { type Compound } from "@/pages/ProteinSearch";
 import './CompoundResutls.css';
@@ -32,6 +40,49 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 	isLoading,
 }) => {
 	const hasResults = compounds.length > 0;
+  const [displayedCompounds, setDisplayedCompounds] = useState(compounds);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    minLikeliness: 0,
+    maxToxicity: 10,
+    minBindingAffinity: 0,
+    sortBy: "likeliness-desc" as "likeliness-desc" | "likeliness-asc" | "toxicity-asc" | "toxicity-desc" | "binding-desc" | "binding-asc"
+  });
+
+  // Update displayed compounds when filters change
+  useEffect(() => {
+    if (!compounds.length) return;
+    
+    let filtered = [...compounds].filter(compound => 
+      compound.likeliness >= filters.minLikeliness && 
+      compound.toxicity <= filters.maxToxicity &&
+      compound.binding_affinity >= filters.minBindingAffinity 
+    );
+    
+    // Sort based on selected option
+    switch (filters.sortBy) {
+      case "likeliness-desc":
+        filtered.sort((a, b) => b.likeliness - a.likeliness);
+        break;
+      case "likeliness-asc":
+        filtered.sort((a, b) => a.likeliness - b.likeliness);
+        break;
+      case "toxicity-desc":
+        filtered.sort((a, b) => b.toxicity - a.toxicity);
+        break;
+      case "toxicity-asc":
+        filtered.sort((a, b) => a.toxicity - b.toxicity);
+        break;
+      case "binding-desc": // Add sort options for binding affinity
+      filtered.sort((a, b) => b.binding_affinity - a.binding_affinity);
+      break;
+      case "binding-asc":
+        filtered.sort((a, b) => a.binding_affinity - b.binding_affinity);
+        break;
+    }
+    
+    setDisplayedCompounds(filtered);
+  }, [compounds, filters]);
 
 	// Animation variants
 	const container = {
@@ -84,10 +135,101 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 					Compatible Compounds
 				</h2>
 				<p className="text-muted-foreground">
-					We found {compounds.length} compounds with potential binding
-					affinity.
-				</p>
+          {displayedCompounds.length === compounds.length 
+            ? `We found ${compounds.length} compounds with potential binding affinity.`
+            : `Showing ${displayedCompounds.length} of ${compounds.length} compounds.`
+          }
+        </p>
 			</div>
+
+      <div className="mb-8">
+        <Button 
+          variant="outline" 
+          className="flex items-center gap-2 mb-4"
+          onClick={() => setFilterOpen(!filterOpen)}
+        >
+          <Filter className="h-4 w-4" />
+          <span>Filter Compounds</span>
+        </Button>
+
+        <AnimatePresence>
+          {filterOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="bg-card border rounded-md p-4 overflow-hidden shadow-sm"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Minimum Drug Likeliness</label>
+                  <div className="flex items-center gap-4">
+                    <Slider 
+                      value={[filters.minLikeliness]} 
+                      min={0} 
+                      max={10} 
+                      step={0.1}
+                      onValueChange={(value) => setFilters({...filters, minLikeliness: value[0]})}
+                    />
+                    <span className="text-sm font-medium w-12 text-right">{filters.minLikeliness.toFixed(1)}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Maximum Toxicity</label>
+                  <div className="flex items-center gap-4">
+                    <Slider 
+                      value={[filters.maxToxicity]} 
+                      min={0} 
+                      max={10} 
+                      step={0.1}
+                      onValueChange={(value) => setFilters({...filters, maxToxicity: value[0]})}
+                    />
+                    <span className="text-sm font-medium w-12 text-right">{filters.maxToxicity.toFixed(1)}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Minimum Binding Affinity</label>
+                  <div className="flex items-center gap-4">
+                    <Slider 
+                      value={[filters.minBindingAffinity]} 
+                      min={0} 
+                      max={10} 
+                      step={0.1}
+                      onValueChange={(value) => setFilters({...filters, minBindingAffinity: value[0]})}
+                    />
+                    <span className="text-sm font-medium w-12 text-right">{filters.minBindingAffinity.toFixed(1)}</span>
+                  </div>
+                </div>  
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Sort By</label>
+                  <Select 
+                    value={filters.sortBy}
+                    onValueChange={(value) => setFilters({
+                      ...filters, 
+                      sortBy: value as "likeliness-desc" | "likeliness-asc" | "toxicity-asc" | "toxicity-desc"
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sort by..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="likeliness-desc">Highest Drug Likeliness</SelectItem>
+                      <SelectItem value="likeliness-asc">Lowest Drug Likeliness</SelectItem>
+                      <SelectItem value="toxicity-asc">Lowest Toxicity</SelectItem>
+                      <SelectItem value="toxicity-desc">Highest Toxicity</SelectItem>
+                      <SelectItem value="binding-desc">Highest Binding Affinity</SelectItem>
+                      <SelectItem value="binding-asc">Lowest Binding Affinity</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
       <motion.div
         variants={container}
         initial="hidden"
