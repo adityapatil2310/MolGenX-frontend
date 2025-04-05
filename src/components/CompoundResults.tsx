@@ -98,7 +98,9 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 		OptimizedCompound[]
 	>([]);
 	const [explanation, setExplanation] = useState("");
+	const [variantsExplanation, setVariantsExplanation] = useState("");
 	const [showOptimized, setShowOptimized] = useState(false);
+	const [showVariantsExplanation, setShowVariantsExplanation] = useState(false);
 	const { toast } = useToast();
 
 	const [optimizationWeights, setOptimizationWeights] =
@@ -123,6 +125,19 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 			| "binding-desc"
 			| "binding-asc",
 	});
+
+	// Load explanations from optimizationResponse props when available
+	useEffect(() => {
+		if (optimizationResponse) {
+			setExplanation(optimizationResponse.explanation || "");
+			setVariantsExplanation(optimizationResponse.variants_explanation || "");
+			
+			// If compounds are available, consider them optimized
+			if (compounds.length > 0) {
+				setShowOptimized(true);
+			}
+		}
+	}, [optimizationResponse, compounds]);
 
 	// Update displayed compounds when filters change or when switching between original/optimized
 	useEffect(() => {
@@ -228,8 +243,10 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 				})
 			);
 
-			setOptimizedCompounds(transformedCompounds);
+			// Store both types of explanations separately
 			setExplanation(data.explanation || "");
+			setVariantsExplanation(data.variants_explanation || "");
+			setOptimizedCompounds(transformedCompounds);
 			setShowOptimized(true);
 
 			toast({
@@ -332,10 +349,61 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 						  } compounds.`}
 				</p>
 
-				{explanation && showOptimized && (
-					<div className="mt-4 p-4 bg-primary/5 rounded-md text-sm text-left max-h-64 overflow-y-auto">
-						<h3 className="font-medium mb-2">AI Analysis:</h3>
-						<p>{explanation}</p>
+				{/* Display AI explanations with toggle option when available */}
+				{(explanation || variantsExplanation) && (
+					<div className="mt-6">
+						<div className="flex justify-center mb-2">
+							<div className="flex rounded-md overflow-hidden border border-input">
+								<Button
+									variant={!showVariantsExplanation ? "default" : "outline"}
+									size="sm"
+									className="rounded-none text-xs"
+									onClick={() => setShowVariantsExplanation(false)}
+								>
+									Compound Analysis
+								</Button>
+								<Button
+									variant={showVariantsExplanation ? "default" : "outline"}
+									size="sm"
+									className="rounded-none text-xs"
+									onClick={() => setShowVariantsExplanation(true)}
+									disabled={!variantsExplanation}
+								>
+									Variants Analysis
+								</Button>
+							</div>
+						</div>
+						<div className="p-4 bg-primary/5 rounded-md text-sm text-left max-h-96 overflow-y-auto">
+							<div className="flex items-center justify-between mb-2">
+								<h3 className="font-medium">AI Analysis:</h3>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-6 px-2 text-xs"
+									onClick={() => {
+										// Copy explanation to clipboard
+										const text = showVariantsExplanation ? variantsExplanation : explanation;
+										navigator.clipboard.writeText(text);
+										toast({
+											title: "Copied to clipboard",
+											description: "The analysis has been copied to your clipboard."
+										});
+									}}
+								>
+									Copy text
+								</Button>
+							</div>
+							{/* Display paragraphs with proper formatting */}
+							<div className="space-y-4">
+								{(showVariantsExplanation ? variantsExplanation : explanation)
+									.split("\n\n")
+									.map((para, i) => (
+										<p key={i} className="whitespace-pre-line">
+											{para}
+										</p>
+									))}
+							</div>
+						</div>
 					</div>
 				)}
 
@@ -511,6 +579,13 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 								</div>
 							</div>
 							<DialogFooter>
+									<Button 
+										variant="default"
+										onClick={optimizeCompounds}
+										disabled={isOptimizing}
+									>
+										{isOptimizing ? "Optimizing..." : "Run Optimization"}
+									</Button>
 								<Button
 									variant="outline"
 									onClick={() => setOptimizationOpen(false)}
