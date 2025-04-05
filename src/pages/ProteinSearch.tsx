@@ -118,39 +118,70 @@ const ProteinSearch: React.FC = () => {
 			const responseData = responseText ? JSON.parse(responseText) : {};
 			console.log("Parsed response data:", responseData);
 
-			// Store the complete optimization response
-			setOptimizationResponse(responseData);
-
-			// Also update compounds for backward compatibility
+			 // The API returns optimized_compounds as a JSON string, so we need to parse it
+			let parsedOptimizedCompounds = [];
+			
 			if (responseData.optimized_compounds) {
+				try {
+					// Try to parse the optimized_compounds string if it's a string
+					if (typeof responseData.optimized_compounds === 'string') {
+						parsedOptimizedCompounds = JSON.parse(responseData.optimized_compounds);
+					} else {
+						// If it's already an array, use it directly
+						parsedOptimizedCompounds = responseData.optimized_compounds;
+					}
+					
+					console.log("Parsed compounds:", parsedOptimizedCompounds);
+				} catch (parseError) {
+					console.error("Error parsing optimized_compounds:", parseError);
+				}
+			}
+			
+			// Create a proper optimizationResponse object with parsed compounds
+			const formattedResponse = {
+				...responseData,
+				optimized_compounds: parsedOptimizedCompounds,
+				// Also parse optimized_variants if present and a string
+				optimized_variants: responseData.optimized_variants && typeof responseData.optimized_variants === 'string' 
+					? JSON.parse(responseData.optimized_variants) 
+					: (responseData.optimized_variants || [])
+			};
+			
+			// Store the complete optimization response with properly parsed arrays
+			setOptimizationResponse(formattedResponse);
+
+			// Map the parsed compounds to our application's Compound interface
+			if (parsedOptimizedCompounds && Array.isArray(parsedOptimizedCompounds)) {
 				setCompounds(
-					responseData.optimized_compounds.map((compound: any) => ({
-						id:
-							compound.id ||
-							Math.random().toString(36).substring(7),
-						name:
-							compound.name ||
-							`Compound-${Math.random()
-								.toString(36)
-								.substring(7)}`,
-						formula: compound.formula || compound.smiles || "",
+					parsedOptimizedCompounds.map((compound: any) => ({
+						id: compound.rank?.toString() || Math.random().toString(36).substring(7),
+						name: compound.name || `Compound-${compound.rank || ''}`,
+						formula: compound.smiles || "",
 						molecularWeight: compound.molecular_weight || 0,
 						likeliness: compound.druglikeness || 0,
 						toxicity: compound.toxicity || 0,
 						binding_affinity: compound.binding_affinity || 0,
-						synthetic_accessibility:
-							compound.synthetic_accessibility || 0,
+						synthetic_accessibility: compound.synthetic_accessibility || 0,
 						lipinski_violations: compound.lipinski_violations || 0,
 						solubility: compound.solubility || 0,
 						structure: compound.smiles || "",
 					}))
-				);
+				 );
+				
+				toast({
+					title: "Search Complete",
+					description: `Found ${parsedOptimizedCompounds.length} optimized compounds for your protein`,
+				});
+			} else {
+				setCompounds([]);
+				setError("No compound data found in the API response");
+				
+				toast({
+					title: "No Compounds Found",
+					description: "The search completed but no compounds were found",
+					variant: "destructive",
+				});
 			}
-
-			toast({
-				title: "Search Complete",
-				description: "Found optimized compounds for your protein",
-			});
 		} catch (error) {
 			console.error("Optimization error:", error);
 			setError(
