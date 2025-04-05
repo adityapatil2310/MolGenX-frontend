@@ -795,9 +795,18 @@ const CompoundCard: React.FC<{
 								{compound.formula}
 							</CardDescription>
 						</div>
-						<div className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs font-semibold">
-							Drug Likeliness: {compound.likeliness.toFixed(2)}
-						</div>
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger>
+									<div className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs font-semibold whitespace-nowrap">
+										DL: {compound.likeliness.toFixed(1)}
+									</div>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>Drug Likeliness: {compound.likeliness.toFixed(2)}</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
 					</div>
 				</CardHeader>
 				<CardContent className="flex-grow pb-2">
@@ -807,24 +816,6 @@ const CompoundCard: React.FC<{
 							alt={`Structure of ${compound.name}`}
 							className="w-full h-full object-contain"
 						/>
-					</div>
-					<div className="grid grid-cols-2 gap-2 text-sm">
-						<div>
-							<p className="text-muted-foreground text-xs">
-								Molecular Weight
-							</p>
-							<p className="font-medium">
-								{compound.molecularWeight.toFixed(2)}
-							</p>
-						</div>
-						<div>
-							<p className="text-muted-foreground text-xs">
-								Toxicity
-							</p>
-							<p className="font-medium">
-								{compound.toxicity.toFixed(2)}
-							</p>
-						</div>
 					</div>
 				</CardContent>
 				<CardFooter className="pt-2">
@@ -886,7 +877,7 @@ const CompoundCard: React.FC<{
 							</CardDescription>
 						</div>
 						<div className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs font-semibold">
-							Drug Likeliness: {compound.likeliness.toFixed(2)}
+							DL: {compound.likeliness.toFixed(1)}
 						</div>
 					</div>
 				</CardHeader>
