@@ -17,6 +17,7 @@ import {
 	Info,
 	Filter,
 	ArrowUpDown,
+	Sparkles,
 } from "lucide-react";
 import {
 	Tooltip,
@@ -39,22 +40,77 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
 import LoadingIndicator from "@/components/ui-elements/LoadingIndicator";
-import { type Compound } from "@/pages/ProteinSearch";
+import {
+	Compound,
+	OptimizationResponse,
+	OptimizationWeights,
+} from "@/pages/ProteinSearch";
 import "./CompoundResutls.css";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
 
-interface CompoundResultsProps {
+export interface CompoundResultsProps {
 	compounds: Compound[];
 	isLoading: boolean;
+	proteinInput: string;
+	optimizationResponse: OptimizationResponse | null;
+	weights: OptimizationWeights;
 }
+
+// Define the OptimizedCompound interface that extends Compound
+export interface OptimizedCompound extends Compound {
+	metrics: {
+		druglikeness: number;
+		synthetic_accessibility: number;
+		lipinski_violations: number;
+		toxicity: number;
+		binding_affinity: number;
+		solubility: number;
+	};
+}
+
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const CompoundResults: React.FC<CompoundResultsProps> = ({
 	compounds,
 	isLoading,
+	proteinInput,
+	optimizationResponse,
+	weights,
 }) => {
 	const hasResults = compounds.length > 0;
 	const [displayedCompounds, setDisplayedCompounds] = useState(compounds);
 	const [filterOpen, setFilterOpen] = useState(false);
 	const [sortOpen, setSortOpen] = useState(false);
+	const [optimizationOpen, setOptimizationOpen] = useState(false);
+	const [isOptimizing, setIsOptimizing] = useState(false);
+	const [optimizedCompounds, setOptimizedCompounds] = useState<
+		OptimizedCompound[]
+	>([]);
+	const [explanation, setExplanation] = useState("");
+	const [showOptimized, setShowOptimized] = useState(false);
+	const { toast } = useToast();
+
+	const [optimizationWeights, setOptimizationWeights] =
+		useState<OptimizationWeights>({
+			druglikeness: 1.0,
+			synthetic_accessibility: 0.8,
+			lipinski_violations: 0.7,
+			toxicity: 1.2,
+			binding_affinity: 1.5,
+			solubility: 0.6,
+		});
+
 	const [filters, setFilters] = useState({
 		minLikeliness: 0,
 		maxToxicity: 10,
@@ -68,11 +124,13 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 			| "binding-asc",
 	});
 
-	// Update displayed compounds when filters change
+	// Update displayed compounds when filters change or when switching between original/optimized
 	useEffect(() => {
-		if (!compounds.length) return;
+		if (!compounds.length && !optimizedCompounds.length) return;
 
-		let filtered = [...compounds].filter(
+		const sourceCompounds = showOptimized ? optimizedCompounds : compounds;
+
+		let filtered = [...sourceCompounds].filter(
 			(compound) =>
 				compound.likeliness >= filters.minLikeliness &&
 				compound.toxicity <= filters.maxToxicity &&
@@ -93,7 +151,7 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 			case "toxicity-asc":
 				filtered.sort((a, b) => a.toxicity - b.toxicity);
 				break;
-			case "binding-desc": // Add sort options for binding affinity
+			case "binding-desc":
 				filtered.sort(
 					(a, b) => b.binding_affinity - a.binding_affinity
 				);
@@ -106,7 +164,93 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 		}
 
 		setDisplayedCompounds(filtered);
-	}, [compounds, filters]);
+	}, [compounds, optimizedCompounds, filters, showOptimized]);
+
+	// Function to call the optimization API
+	const optimizeCompounds = async () => {
+		if (!proteinInput) {
+			toast({
+				title: "Missing Protein Data",
+				description:
+					"Please enter a protein sequence or identifier first.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		setIsOptimizing(true);
+
+		try {
+			const response = await fetch(`${apiUrl}/api/optimize`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					protein: proteinInput,
+					weights: optimizationWeights,
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error(
+					`Error: ${response.status} ${response.statusText}`
+				);
+			}
+
+			const data = await response.json();
+
+			// Transform API data to match our compound interface
+			const transformedCompounds = data.optimized_compounds.map(
+				(compound: any) => ({
+					id: compound.id || Math.random().toString(36).substr(2, 9),
+					name: compound.name || `Compound-${compound.id || ""}`,
+					formula: compound.smiles || compound.formula || "",
+					likeliness: compound.metrics?.druglikeness || 0,
+					toxicity: compound.metrics?.toxicity || 0,
+					binding_affinity: compound.metrics?.binding_affinity || 0,
+					molecularWeight: compound.metrics?.molecular_weight || 0,
+					structure:
+						compound.visualization_url ||
+						compound.structure ||
+						"https://placeholder.com/molecule.svg",
+					metrics: {
+						druglikeness: compound.metrics?.druglikeness || 0,
+						synthetic_accessibility:
+							compound.metrics?.synthetic_accessibility || 0,
+						lipinski_violations:
+							compound.metrics?.lipinski_violations || 0,
+						toxicity: compound.metrics?.toxicity || 0,
+						binding_affinity:
+							compound.metrics?.binding_affinity || 0,
+						solubility: compound.metrics?.solubility || 0,
+					},
+				})
+			);
+
+			setOptimizedCompounds(transformedCompounds);
+			setExplanation(data.explanation || "");
+			setShowOptimized(true);
+
+			toast({
+				title: "Optimization Complete",
+				description: `Found ${transformedCompounds.length} optimized compounds for your target.`,
+			});
+		} catch (error) {
+			console.error("Optimization error:", error);
+			toast({
+				title: "Optimization Failed",
+				description:
+					error instanceof Error
+						? error.message
+						: "Failed to optimize compounds",
+				variant: "destructive",
+			});
+		} finally {
+			setIsOptimizing(false);
+			setOptimizationOpen(false);
+		}
+	};
 
 	// Animation variants
 	const container = {
@@ -124,15 +268,26 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 		show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 	};
 
-	if (isLoading) {
+	if (isLoading || isOptimizing) {
 		return (
 			<div className="flex flex-col items-center justify-center py-24">
-				<LoadingIndicator message="Searching for compatible compounds..." />
+				<LoadingIndicator
+					message={
+						isOptimizing
+							? "Optimizing compounds for your target..."
+							: "Searching for compatible compounds..."
+					}
+				/>
 			</div>
 		);
 	}
 
-	if (!hasResults && !isLoading) {
+	if (
+		!hasResults &&
+		!optimizedCompounds.length &&
+		!isLoading &&
+		!isOptimizing
+	) {
 		return (
 			<motion.div
 				initial={{ opacity: 0 }}
@@ -156,18 +311,242 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 		>
 			<div className="mb-10 text-center">
 				<h2 className="text-2xl font-semibold mb-2">
-					Compatible Compounds
+					{showOptimized
+						? "Optimized Compounds"
+						: "Compatible Compounds"}
 				</h2>
 				<p className="text-muted-foreground">
-					{displayedCompounds.length === compounds.length
-						? `We found ${compounds.length} compounds with potential binding affinity.`
-						: `Showing ${displayedCompounds.length} of ${compounds.length} compounds.`}
+					{displayedCompounds.length ===
+					(showOptimized
+						? optimizedCompounds.length
+						: compounds.length)
+						? `We found ${
+								showOptimized
+									? optimizedCompounds.length
+									: compounds.length
+						  } compounds with potential binding affinity.`
+						: `Showing ${displayedCompounds.length} of ${
+								showOptimized
+									? optimizedCompounds.length
+									: compounds.length
+						  } compounds.`}
 				</p>
+
+				{explanation && showOptimized && (
+					<div className="mt-4 p-4 bg-primary/5 rounded-md text-sm text-left max-h-64 overflow-y-auto">
+						<h3 className="font-medium mb-2">AI Analysis:</h3>
+						<p>{explanation}</p>
+					</div>
+				)}
+
+				{/* Add optimization settings button */}
+				<div className="mt-4">
+					<Dialog
+						open={optimizationOpen}
+						onOpenChange={setOptimizationOpen}
+					>
+						<DialogTrigger asChild>
+							<Button
+								variant="outline"
+								size="sm"
+								className="gap-1"
+							>
+								<Sparkles className="h-4 w-4" />
+								<span>Optimization Settings</span>
+							</Button>
+						</DialogTrigger>
+						<DialogContent className="sm:max-w-[500px]">
+							<DialogHeader>
+								<DialogTitle>Optimization Settings</DialogTitle>
+								<DialogDescription>
+									Adjust parameters for compound optimization
+									during search.
+								</DialogDescription>
+							</DialogHeader>
+							<div className="grid gap-4 py-4">
+								<div className="space-y-2">
+									<Label htmlFor="druglikeness">
+										Drug Likeliness (
+										{optimizationWeights.druglikeness.toFixed(
+											1
+										)}
+										)
+									</Label>
+									<Slider
+										id="druglikeness"
+										value={[
+											optimizationWeights.druglikeness,
+										]}
+										min={0}
+										max={2}
+										step={0.1}
+										onValueChange={(val) =>
+											setOptimizationWeights({
+												...optimizationWeights,
+												druglikeness: val[0],
+											})
+										}
+									/>
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="synthetic_accessibility">
+										Synthetic Accessibility (
+										{optimizationWeights.synthetic_accessibility.toFixed(
+											1
+										)}
+										)
+									</Label>
+									<Slider
+										id="synthetic_accessibility"
+										value={[
+											optimizationWeights.synthetic_accessibility,
+										]}
+										min={0}
+										max={2}
+										step={0.1}
+										onValueChange={(val) =>
+											setOptimizationWeights({
+												...optimizationWeights,
+												synthetic_accessibility: val[0],
+											})
+										}
+									/>
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="lipinski_violations">
+										Lipinski Violations (
+										{optimizationWeights.lipinski_violations.toFixed(
+											1
+										)}
+										)
+									</Label>
+									<Slider
+										id="lipinski_violations"
+										value={[
+											optimizationWeights.lipinski_violations,
+										]}
+										min={0}
+										max={2}
+										step={0.1}
+										onValueChange={(val) =>
+											setOptimizationWeights({
+												...optimizationWeights,
+												lipinski_violations: val[0],
+											})
+										}
+									/>
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="toxicity">
+										Toxicity (
+										{optimizationWeights.toxicity.toFixed(
+											1
+										)}
+										)
+									</Label>
+									<Slider
+										id="toxicity"
+										value={[optimizationWeights.toxicity]}
+										min={0}
+										max={2}
+										step={0.1}
+										onValueChange={(val) =>
+											setOptimizationWeights({
+												...optimizationWeights,
+												toxicity: val[0],
+											})
+										}
+									/>
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="binding_affinity">
+										Binding Affinity (
+										{optimizationWeights.binding_affinity.toFixed(
+											1
+										)}
+										)
+									</Label>
+									<Slider
+										id="binding_affinity"
+										value={[
+											optimizationWeights.binding_affinity,
+										]}
+										min={0}
+										max={2}
+										step={0.1}
+										onValueChange={(val) =>
+											setOptimizationWeights({
+												...optimizationWeights,
+												binding_affinity: val[0],
+											})
+										}
+									/>
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="solubility">
+										Solubility (
+										{optimizationWeights.solubility.toFixed(
+											1
+										)}
+										)
+									</Label>
+									<Slider
+										id="solubility"
+										value={[optimizationWeights.solubility]}
+										min={0}
+										max={2}
+										step={0.1}
+										onValueChange={(val) =>
+											setOptimizationWeights({
+												...optimizationWeights,
+												solubility: val[0],
+											})
+										}
+									/>
+								</div>
+							</div>
+							<DialogFooter>
+								<Button
+									variant="outline"
+									onClick={() => setOptimizationOpen(false)}
+								>
+									Close
+								</Button>
+							</DialogFooter>
+						</DialogContent>
+					</Dialog>
+				</div>
 			</div>
-			<div className="mb-8 flex space-x-4">
+
+			<div className="mb-8 flex flex-wrap gap-4">
+				{/* Tab buttons to switch between original and optimized compounds */}
+				{optimizedCompounds.length > 0 && (
+					<div className="flex rounded-md overflow-hidden border border-input">
+						<Button
+							variant={showOptimized ? "outline" : "default"}
+							className="rounded-none"
+							onClick={() => setShowOptimized(false)}
+						>
+							Original Results
+						</Button>
+						<Button
+							variant={showOptimized ? "default" : "outline"}
+							className="rounded-none"
+							onClick={() => setShowOptimized(true)}
+						>
+							Optimized Results
+						</Button>
+					</div>
+				)}
+
 				<Button
 					variant="outline"
-					className="flex items-center gap-2 mb-4"
+					className="flex items-center gap-2"
 					onClick={() => setFilterOpen(!filterOpen)}
 				>
 					<Filter className="h-4 w-4" />
@@ -178,7 +557,7 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 					<DropdownMenuTrigger asChild>
 						<Button
 							variant="outline"
-							className="flex items-center gap-2 mb-4"
+							className="flex items-center gap-2"
 						>
 							<ArrowUpDown className="h-4 w-4" />
 							<span>Sort Compounds</span>
@@ -278,6 +657,7 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
+
 			<AnimatePresence>
 				{filterOpen && (
 					<motion.div
@@ -359,6 +739,7 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 					</motion.div>
 				)}
 			</AnimatePresence>
+
 			<motion.div
 				variants={container}
 				initial="hidden"
@@ -367,7 +748,10 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 			>
 				{displayedCompounds.map((compound) => (
 					<motion.div key={compound.id} variants={item}>
-						<CompoundCard compound={compound} />
+						<CompoundCard
+							compound={compound}
+							isOptimized={showOptimized}
+						/>
 					</motion.div>
 				))}
 			</motion.div>
@@ -375,8 +759,14 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
 	);
 };
 
-const CompoundCard: React.FC<{ compound: Compound }> = ({ compound }) => {
+const CompoundCard: React.FC<{
+	compound: Compound | OptimizedCompound;
+	isOptimized?: boolean;
+}> = ({ compound, isOptimized = false }) => {
 	const [isFlipped, setIsFlipped] = useState(false);
+
+	// Check if this is an optimized compound with metrics
+	const hasMetrics = "metrics" in compound;
 
 	return (
 		<div className={`card-container ${isFlipped ? "flipped" : ""}`}>
@@ -384,8 +774,22 @@ const CompoundCard: React.FC<{ compound: Compound }> = ({ compound }) => {
 				<CardHeader className="pb-2">
 					<div className="flex justify-between items-start">
 						<div>
-							<CardTitle className="text-lg">
+							<CardTitle className="text-lg flex items-center gap-2">
 								{compound.name}
+								{isOptimized && (
+									<TooltipProvider>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span className="inline-flex">
+													<Sparkles className="h-4 w-4 text-primary" />
+												</span>
+											</TooltipTrigger>
+											<TooltipContent>
+												<p>Optimized compound</p>
+											</TooltipContent>
+										</Tooltip>
+									</TooltipProvider>
+								)}
 							</CardTitle>
 							<CardDescription>
 								{compound.formula}
@@ -471,8 +875,11 @@ const CompoundCard: React.FC<{ compound: Compound }> = ({ compound }) => {
 				<CardHeader className="pb-2">
 					<div className="flex justify-between items-start">
 						<div>
-							<CardTitle className="text-lg">
+							<CardTitle className="text-lg flex items-center gap-2">
 								{compound.name} - Details
+								{isOptimized && (
+									<Sparkles className="h-4 w-4 text-primary" />
+								)}
 							</CardTitle>
 							<CardDescription>
 								{compound.formula}
@@ -489,33 +896,57 @@ const CompoundCard: React.FC<{ compound: Compound }> = ({ compound }) => {
 							Compound Properties
 						</h3>
 						<ul className="list-none space-y-1 text-sm">
-							<li>
+							<li className="flex justify-between">
 								<span>Drug Likeliness:</span>
 								<span className="font-medium">
 									{compound.likeliness.toFixed(2)}
 								</span>
 							</li>
-							<li>
+							<li className="flex justify-between">
 								<span>Synthetic Accessibility:</span>
-								<span className="font-medium">10.0</span>
+								<span className="font-medium">
+									{hasMetrics
+										? (
+												compound as OptimizedCompound
+										  ).metrics.synthetic_accessibility.toFixed(
+												2
+										  )
+										: "10.0"}
+								</span>
 							</li>
-							<li>
+							<li className="flex justify-between">
 								<span>Lipinski Violations:</span>
-								<span className="font-medium">4</span>
+								<span className="font-medium">
+									{hasMetrics
+										? (
+												compound as OptimizedCompound
+										  ).metrics.lipinski_violations.toFixed(
+												0
+										  )
+										: "4"}
+								</span>
 							</li>
-							<li>
+							<li className="flex justify-between">
 								<span>Toxicity:</span>
 								<span className="font-medium">
 									{compound.toxicity.toFixed(2)}
 								</span>
 							</li>
-							<li>
+							<li className="flex justify-between">
 								<span>Binding Affinity:</span>
-								<span className="font-medium">0.0</span>
+								<span className="font-medium">
+									{compound.binding_affinity.toFixed(2)}
+								</span>
 							</li>
-							<li>
+							<li className="flex justify-between">
 								<span>Solubility:</span>
-								<span className="font-medium">-5.0</span>
+								<span className="font-medium">
+									{hasMetrics
+										? (
+												compound as OptimizedCompound
+										  ).metrics.solubility.toFixed(2)
+										: "-5.0"}
+								</span>
 							</li>
 						</ul>
 					</div>

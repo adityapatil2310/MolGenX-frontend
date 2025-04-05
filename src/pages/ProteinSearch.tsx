@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import ProteinInput from "@/components/ProteinInput";
+import { useToast } from "@/components/ui/use-toast";
 import CompoundResults from "@/components/CompoundResults";
 import ProteinStructure from "@/components/ProteinStructure";
-import { searchCompounds } from "@/utils/proteinUtils";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export interface Compound {
 	id: string;
@@ -13,38 +15,159 @@ export interface Compound {
 	molecularWeight: number;
 	toxicity: number;
 	likeliness: number;
+	binding_affinity: number;
 	structure: string;
-  synthetic_accessibility: number;
-  lipinski_violations: number;
-  binding_affinity: number;
-  solubility: number;
+	synthetic_accessibility: number;
+	lipinski_violations: number;
+	solubility: number;
 }
 
-const ProteinSearch = () => {
-	const [proteinSequence, setProteinSequence] = useState<string>("");
-	const [isSearching, setIsSearching] = useState<boolean>(false);
-	const [compounds, setCompounds] = useState<Compound[]>([]);
-	const [error, setError] = useState<string | null>(null);
+export interface OptimizationWeights {
+	druglikeness: number;
+	synthetic_accessibility: number;
+	lipinski_violations: number;
+	toxicity: number;
+	binding_affinity: number;
+	solubility: number;
+}
 
-	const handleSearch = async (sequence: string) => {
-		if (!sequence.trim()) {
+export interface OptimizationResponse {
+	optimized_compounds: any[];
+	explanation: string;
+	optimized_variants: any[];
+	variants_explanation: string;
+}
+
+const ProteinSearch: React.FC = () => {
+	const [proteinInput, setProteinInput] = useState("");
+	const [isLoading, setIsLoading] = useState(false);
+	const [compounds, setCompounds] = useState<Compound[]>([]);
+	const [optimizationResponse, setOptimizationResponse] =
+		useState<OptimizationResponse | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	const { toast } = useToast();
+
+	// Fixed API URL - make sure this matches your environment variables
+	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+	const [optimizationWeights, setOptimizationWeights] =
+		useState<OptimizationWeights>({
+			druglikeness: 1.0,
+			synthetic_accessibility: 0.8,
+			lipinski_violations: 0.7,
+			toxicity: 1.2,
+			binding_affinity: 1.5,
+			solubility: 0.6,
+		});
+
+	// Sample data for Human Haemoglobin
+	const humanHaemoglobinExample = "1HHO"; // PDB ID for Human Haemoglobin
+
+	const fillExampleData = () => {
+		setProteinInput(humanHaemoglobinExample);
+	};
+
+	const handleSearch = async () => {
+		if (!proteinInput.trim()) {
 			setError("Please enter a protein sequence or identifier");
+			toast({
+				title: "Input Required",
+				description: "Please enter a protein sequence or identifier",
+				variant: "destructive",
+			});
 			return;
 		}
 
-		setIsSearching(true);
+		setIsLoading(true);
 		setError(null);
 
+		console.log("Sending request to:", `${apiUrl}/api/optimize`);
+		console.log("Request body:", {
+			protein: proteinInput,
+			weights: optimizationWeights,
+		});
+
 		try {
-			const results = await searchCompounds(sequence);
-			setCompounds(results);
-		} catch (err) {
-			console.error("Error searching compounds:", err);
+			// Call the optimize API endpoint
+			const optimizeResponse = await fetch(`${apiUrl}/api/optimize`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+				},
+				credentials: "include", // Include cookies if needed
+				body: JSON.stringify({
+					protein: proteinInput,
+					weights: optimizationWeights,
+				}),
+			});
+
+			console.log("Response status:", optimizeResponse.status);
+
+			// Try to get response text for debugging
+			const responseText = await optimizeResponse.text();
+			console.log("Response text:", responseText);
+
+			if (!optimizeResponse.ok) {
+				throw new Error(
+					`Optimization failed: ${optimizeResponse.status} ${optimizeResponse.statusText}. Response: ${responseText}`
+				);
+			}
+
+			// Parse the JSON from the text response
+			const responseData = responseText ? JSON.parse(responseText) : {};
+			console.log("Parsed response data:", responseData);
+
+			// Store the complete optimization response
+			setOptimizationResponse(responseData);
+
+			// Also update compounds for backward compatibility
+			if (responseData.optimized_compounds) {
+				setCompounds(
+					responseData.optimized_compounds.map((compound: any) => ({
+						id:
+							compound.id ||
+							Math.random().toString(36).substring(7),
+						name:
+							compound.name ||
+							`Compound-${Math.random()
+								.toString(36)
+								.substring(7)}`,
+						formula: compound.formula || compound.smiles || "",
+						molecularWeight: compound.molecular_weight || 0,
+						likeliness: compound.druglikeness || 0,
+						toxicity: compound.toxicity || 0,
+						binding_affinity: compound.binding_affinity || 0,
+						synthetic_accessibility:
+							compound.synthetic_accessibility || 0,
+						lipinski_violations: compound.lipinski_violations || 0,
+						solubility: compound.solubility || 0,
+						structure: compound.smiles || "",
+					}))
+				);
+			}
+
+			toast({
+				title: "Search Complete",
+				description: "Found optimized compounds for your protein",
+			});
+		} catch (error) {
+			console.error("Optimization error:", error);
 			setError(
-				"An error occurred while searching for compatible compounds"
+				error instanceof Error
+					? error.message
+					: "Failed to find optimized compounds"
 			);
+			toast({
+				title: "Optimization Failed",
+				description:
+					error instanceof Error
+						? error.message
+						: "Failed to find optimized compounds",
+				variant: "destructive",
+			});
 		} finally {
-			setIsSearching(false);
+			setIsLoading(false);
 		}
 	};
 
@@ -86,12 +209,54 @@ const ProteinSearch = () => {
 
 				<div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
 					<div className="lg:col-span-5">
-						<ProteinInput
-							onSearch={handleSearch}
-							isSearching={isSearching}
-							error={error}
-							setProteinSequence={setProteinSequence}
-						/>
+						<Card>
+							<CardContent className="pt-6">
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<label className="text-sm font-medium">
+											Enter Protein Sequence or PDB ID
+										</label>
+										<Textarea
+											placeholder="Try Human Haemoglobin: 1HHO or MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTT..."
+											value={proteinInput}
+											onChange={(e) =>
+												setProteinInput(e.target.value)
+											}
+											className="h-32"
+										/>
+										<div className="flex items-center justify-between">
+											<p className="text-xs text-muted-foreground">
+												Paste a protein amino acid
+												sequence or PDB ID to find
+												optimized compounds. Try Human
+												Haemoglobin (PDB: 1HHO).
+											</p>
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={fillExampleData}
+												className="text-xs"
+											>
+												Try Human Haemoglobin
+											</Button>
+										</div>
+									</div>
+
+									<Button
+										className="w-full"
+										onClick={handleSearch}
+										disabled={isLoading}
+									>
+										Find Optimized Compounds
+									</Button>
+									{error && (
+										<p className="text-sm text-red-500">
+											{error}
+										</p>
+									)}
+								</div>
+							</CardContent>
+						</Card>
 					</div>
 
 					<div className="lg:col-span-7">
@@ -101,9 +266,7 @@ const ProteinSearch = () => {
 							transition={{ delay: 0.5, duration: 0.5 }}
 							className="glass rounded-2xl p-6 h-full"
 						>
-							<ProteinStructure
-								proteinSequence={proteinSequence}
-							/>
+							<ProteinStructure proteinSequence={proteinInput} />
 						</motion.div>
 					</div>
 				</div>
@@ -112,7 +275,10 @@ const ProteinSearch = () => {
 
 				<CompoundResults
 					compounds={compounds}
-					isLoading={isSearching}
+					isLoading={isLoading}
+					proteinInput={proteinInput}
+					optimizationResponse={optimizationResponse}
+					weights={optimizationWeights}
 				/>
 			</motion.div>
 		</div>
