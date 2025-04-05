@@ -1,93 +1,68 @@
-
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import SearchButton from "@/components/ui-elements/SearchButton";
-import { AlertCircle } from "lucide-react";
 
 interface ProteinInputProps {
-  onSearch: (sequence: string) => void;
-  isSearching: boolean;
-  error: string | null;
-  setProteinSequence: (sequence: string) => void;
+	value: string;
+	onChange: (value: string) => void;
+	onExampleClick: () => void;
+	disabled?: boolean;
 }
 
 const ProteinInput: React.FC<ProteinInputProps> = ({
-  onSearch,
-  isSearching,
-  error,
-  setProteinSequence,
+	value,
+	onChange,
+	onExampleClick,
+	disabled = false,
 }) => {
-  const [sequence, setSequence] = useState<string>("");
+	// Validation for PDB ID format (typically 4 alphanumeric characters)
+	const isPdbIdValid = (input: string) => {
+		// Basic PDB ID validation - typically 4 characters, alphanumeric
+		const pdbIdRegex = /^[A-Za-z0-9]{4}$/;
+		return pdbIdRegex.test(input.trim());
+	};
 
-  const handleInputChange = (value: string) => {
-      setSequence(value);
-      setProteinSequence(value);
-  };
+	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		// Convert to uppercase as PDB IDs are conventionally uppercase
+		const input = e.target.value.toUpperCase();
+		// Limit to alphanumeric characters and maximum 4 characters
+		const sanitizedInput = input.replace(/[^A-Z0-9]/g, "").substring(0, 4);
+		onChange(sanitizedInput);
+	};
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const value = sequence;
-    onSearch(value);
-  };
-  const exampleSequence = "MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHGKKVADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFKLLSHCLLVTLAAHLPAEFTPAVHASLDKFLASVSTVLTSKYR";
-
-  const handleExampleClick = (example: string) => {
-      setSequence(example);
-      setProteinSequence(example);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="glass rounded-2xl p-6"
-    >
-      <form onSubmit={handleSubmit}>
-        <div className="mb-6">
-          <p className="text-lg font-semibold">Protein Sequence</p>
-        </div>
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">
-              Enter Amino Acid Sequence
-            </label>
-            <Textarea
-              value={sequence}
-              onChange={(e) => handleInputChange(e.target.value)}
-              placeholder="Enter protein sequence using one-letter amino acid codes..."
-              className="min-h-[180px] bg-white/50 dark:bg-black/20 resize-none transition-all duration-200 focus:ring-2 focus:ring-offset-0 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-          
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Example:</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleExampleClick(exampleSequence)}
-              className="text-xs bg-background/80 hover:bg-background"
-            >
-              Human Hemoglobin
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <SearchButton
-            isSearching={isSearching}
-            onClick={handleSubmit}
-            className="w-full"
-          />
-        </div>
-      </form>
-    </motion.div>
-  );
+	return (
+		<div className="space-y-2">
+			<label className="text-sm font-medium">Enter PDB ID</label>
+			<Textarea
+				placeholder="Enter 4-character PDB ID (e.g., 1HHO)"
+				value={value}
+				onChange={handleChange}
+				className="h-20 font-mono text-center text-lg"
+				disabled={disabled}
+				maxLength={4}
+			/>
+			<div className="flex items-center justify-between">
+				<p className="text-xs text-muted-foreground">
+					Enter a valid 4-character PDB ID to find optimized
+					compounds.
+					{!isPdbIdValid(value) && value.length > 0 && (
+						<span className="text-red-500 ml-1">
+							Please enter a valid 4-character PDB ID.
+						</span>
+					)}
+				</p>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={onExampleClick}
+					className="text-xs"
+					disabled={disabled}
+				>
+					Try Human Haemoglobin (1HHO)
+				</Button>
+			</div>
+		</div>
+	);
 };
 
 export default ProteinInput;

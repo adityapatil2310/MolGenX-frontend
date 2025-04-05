@@ -4,9 +4,9 @@ import { useToast } from "@/components/ui/use-toast";
 import CompoundResults from "@/components/CompoundResults";
 import ProteinStructure from "@/components/ProteinStructure";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import ProteinInput from "@/components/ProteinInput";
 
 export interface Compound {
 	id: string;
@@ -68,11 +68,11 @@ const ProteinSearch: React.FC = () => {
 	};
 
 	const handleSearch = async () => {
-		if (!proteinInput.trim()) {
-			setError("Please enter a protein sequence or identifier");
+		if (!proteinInput.trim() || proteinInput.length !== 4) {
+			setError("Please enter a valid PDB ID (4 characters)");
 			toast({
-				title: "Input Required",
-				description: "Please enter a protein sequence or identifier",
+				title: "Invalid PDB ID",
+				description: "Please enter a valid 4-character PDB ID",
 				variant: "destructive",
 			});
 			return;
@@ -118,35 +118,39 @@ const ProteinSearch: React.FC = () => {
 			const responseData = responseText ? JSON.parse(responseText) : {};
 			console.log("Parsed response data:", responseData);
 
-			 // The API returns optimized_compounds as a JSON string, so we need to parse it
+			// The API returns optimized_compounds as a JSON string, so we need to parse it
 			let parsedOptimizedCompounds = [];
-			
+
 			if (responseData.optimized_compounds) {
 				try {
 					// Try to parse the optimized_compounds string if it's a string
-					if (typeof responseData.optimized_compounds === 'string') {
-						parsedOptimizedCompounds = JSON.parse(responseData.optimized_compounds);
+					if (typeof responseData.optimized_compounds === "string") {
+						parsedOptimizedCompounds = JSON.parse(
+							responseData.optimized_compounds
+						);
 					} else {
 						// If it's already an array, use it directly
 						parsedOptimizedCompounds = responseData.optimized_compounds;
 					}
-					
+
 					console.log("Parsed compounds:", parsedOptimizedCompounds);
 				} catch (parseError) {
 					console.error("Error parsing optimized_compounds:", parseError);
 				}
 			}
-			
+
 			// Create a proper optimizationResponse object with parsed compounds
 			const formattedResponse = {
 				...responseData,
 				optimized_compounds: parsedOptimizedCompounds,
 				// Also parse optimized_variants if present and a string
-				optimized_variants: responseData.optimized_variants && typeof responseData.optimized_variants === 'string' 
-					? JSON.parse(responseData.optimized_variants) 
-					: (responseData.optimized_variants || [])
+				optimized_variants:
+					responseData.optimized_variants &&
+					typeof responseData.optimized_variants === "string"
+						? JSON.parse(responseData.optimized_variants)
+						: responseData.optimized_variants || [],
 			};
-			
+
 			// Store the complete optimization response with properly parsed arrays
 			setOptimizationResponse(formattedResponse);
 
@@ -155,7 +159,7 @@ const ProteinSearch: React.FC = () => {
 				setCompounds(
 					parsedOptimizedCompounds.map((compound: any) => ({
 						id: compound.rank?.toString() || Math.random().toString(36).substring(7),
-						name: compound.name || `Compound-${compound.rank || ''}`,
+						name: compound.name || `Compound-${compound.rank || ""}`,
 						formula: compound.smiles || "",
 						molecularWeight: compound.molecular_weight || 0,
 						likeliness: compound.druglikeness || 0,
@@ -166,8 +170,8 @@ const ProteinSearch: React.FC = () => {
 						solubility: compound.solubility || 0,
 						structure: compound.smiles || "",
 					}))
-				 );
-				
+				);
+
 				toast({
 					title: "Search Complete",
 					description: `Found ${parsedOptimizedCompounds.length} optimized compounds for your protein`,
@@ -175,7 +179,7 @@ const ProteinSearch: React.FC = () => {
 			} else {
 				setCompounds([]);
 				setError("No compound data found in the API response");
-				
+
 				toast({
 					title: "No Compounds Found",
 					description: "The search completed but no compounds were found",
@@ -243,40 +247,17 @@ const ProteinSearch: React.FC = () => {
 						<Card>
 							<CardContent className="pt-6">
 								<div className="space-y-4">
-									<div className="space-y-2">
-										<label className="text-sm font-medium">
-											Enter Protein Sequence or PDB ID
-										</label>
-										<Textarea
-											placeholder="Try Human Haemoglobin: 1HHO or MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTT..."
-											value={proteinInput}
-											onChange={(e) =>
-												setProteinInput(e.target.value)
-											}
-											className="h-32"
-										/>
-										<div className="flex items-center justify-between">
-											<p className="text-xs text-muted-foreground">
-												Paste a protein amino acid
-												sequence or PDB ID to find
-												optimized compounds. Try Human
-												Haemoglobin (PDB: 1HHO).
-											</p>
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={fillExampleData}
-												className="text-xs"
-											>
-												Try Human Haemoglobin
-											</Button>
-										</div>
-									</div>
+									<ProteinInput
+										value={proteinInput}
+										onChange={setProteinInput}
+										onExampleClick={fillExampleData}
+										disabled={isLoading}
+									/>
 
 									<Button
 										className="w-full"
 										onClick={handleSearch}
-										disabled={isLoading}
+										disabled={isLoading || proteinInput.length !== 4}
 									>
 										Find Optimized Compounds
 									</Button>
