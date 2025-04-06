@@ -245,14 +245,6 @@ const ProteinSearch: React.FC = () => {
 				className="max-w-7xl mx-auto"
 			>
 				<div className="text-center mb-16">
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={{ delay: 0.2, duration: 0.7 }}
-						className="inline-block py-1 px-3 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3"
-					>
-						Drug Discovery Platform
-					</motion.div>
 					<motion.h1
 						initial={{ opacity: 0, y: 10 }}
 						animate={{ opacity: 1, y: 0 }}
