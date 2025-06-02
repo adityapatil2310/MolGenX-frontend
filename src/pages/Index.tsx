@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Beaker, Loader2 } from "lucide-react";
@@ -12,14 +12,22 @@ declare global {
 
 const Index = () => {
   const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const hasSetupResizeObserver = useRef(false);
   
   useEffect(() => {
     // Load 3Dmol.js script dynamically
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.1/3Dmol-min.js';
     script.async = true;
-    script.onload = initializeMoleculeViewer;
+    
+    script.onload = () => {
+      // We'll initialize after the component has fully mounted
+      requestAnimationFrame(() => {
+        requestAnimationFrame(initializeMoleculeViewer);
+      });
+    };
     document.body.appendChild(script);
     
     return () => {
@@ -28,15 +36,57 @@ const Index = () => {
       }
     };
   }, []);
+
+  // Separate function to set up the resize observer
+  const setupResizeObserver = (container: HTMLDivElement, viewer: any) => {
+    if (hasSetupResizeObserver.current) return;
+    hasSetupResizeObserver.current = true;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (entries.length > 0 && viewer) {
+        const { width, height } = entries[0].contentRect;
+        viewer.resize(width, height);
+        viewer.render();
+      }
+    });
+    
+    resizeObserver.observe(container);
+    
+    // Clean up the observer when component unmounts
+    return () => {
+      resizeObserver.disconnect();
+    };
+  };
   
   const initializeMoleculeViewer = () => {
     if (!viewerContainerRef.current || !window.$3Dmol) return;
     
-    // Allow time for the DOM to be ready
-    setTimeout(() => {
-      try {
-        const viewer = window.$3Dmol.createViewer(viewerContainerRef.current);
-        const pdbData = `HETATM    1  C1  UNL     1       0.841  -1.765  -0.442  1.00  0.00           C  
+    try {
+      const container = viewerContainerRef.current;
+      
+      // Remove any existing canvas from previous renders
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+      
+      // Force a layout reflow to get accurate sizes
+      const { width, height } = container.getBoundingClientRect();
+      
+      // Create viewer with explicit width and height
+      const viewer = window.$3Dmol.createViewer(container, {
+        backgroundColor: "transparent",
+        id: "molViewer",
+        width: width,
+        height: height
+      });
+      // Store viewer reference
+      viewerRef.current = viewer;
+      
+      // Set up resize observer for continuous size monitoring
+      setupResizeObserver(container, viewer);
+
+        
+      const pdbData = `HETATM    1  C1  UNL     1       0.841  -1.765  -0.442  1.00  0.00           C  
 HETATM    2  C2  UNL     1       1.366  -0.347  -0.149  1.00  0.00           C  
 HETATM    3  C3  UNL     1       0.901   0.103   1.248  1.00  0.00           C  
 HETATM    4  C4  UNL     1       0.863   0.642  -1.239  1.00  0.00           C  
@@ -113,41 +163,76 @@ CONECT   24   25   25   52
 CONECT   25   53
 END`;
 
-        viewer.addModel(pdbData, "pdb");
-        viewer.setStyle({}, {"stick": {"radius": 0.2, "colorscheme": "cyanCarbon"}});
-        viewer.addStyle({"atom": "C"}, {"sphere": {"radius": 0.4, "color": "cyan"}});
-        viewer.addStyle({"atom": "O"}, {"sphere": {"radius": 0.4, "color": "red"}});
-        viewer.addStyle({"atom": "N"}, {"sphere": {"radius": 0.4, "color": "blue"}});
-        viewer.addStyle({"atom": "S"}, {"sphere": {"radius": 0.4, "color": "yellow"}});
-        viewer.addStyle({"atom": "Cl"}, {"sphere": {"radius": 0.4, "color": "green"}});
-        viewer.addStyle({"atom": "BR"}, {"sphere": {"radius": 0.6, "color": "#7b3f00"}});
-        viewer.setBackgroundColor("transparent");
-        viewer.setViewStyle({style: "outline"});
-        viewer.zoomTo();
-        viewer.rotate(40, "y");
-        viewer.rotate(20, "x");
-        viewer.render();
+      viewer.addModel(pdbData, "pdb");
+      viewer.setStyle({}, {"stick": {"radius": 0.2, "colorscheme": "cyanCarbon"}});
+      viewer.addStyle({"atom": "C"}, {"sphere": {"radius": 0.4, "color": "cyan"}});
+      viewer.addStyle({"atom": "O"}, {"sphere": {"radius": 0.4, "color": "red"}});
+      viewer.addStyle({"atom": "N"}, {"sphere": {"radius": 0.4, "color": "blue"}});
+      viewer.addStyle({"atom": "S"}, {"sphere": {"radius": 0.4, "color": "yellow"}});
+      viewer.addStyle({"atom": "Cl"}, {"sphere": {"radius": 0.4, "color": "green"}});
+      viewer.addStyle({"atom": "BR"}, {"sphere": {"radius": 0.6, "color": "#7b3f00"}});
+      viewer.setBackgroundColor("transparent");
+      viewer.setViewStyle({style: "outline"});
+      viewer.zoomTo();
+      viewer.rotate(40, "y");
+      viewer.rotate(20, "x");
+      viewer.render();
         
-        // Add animation to rotate the molecule
-        let spin = false;
-        viewerContainerRef.current.addEventListener('mouseover', () => { spin = true; animate(); });
-        viewerContainerRef.current.addEventListener('mouseout', () => { spin = false; });
+      // Force a resize after rendering to ensure proper dimensions
+      viewer.resize(width, height);
+      viewer.render();
+
+      // Add animation to rotate the molecule
+      let spin = false;
+      container.addEventListener('mouseover', () => { spin = true; animate(); });
+      container.addEventListener('mouseout', () => { spin = false; });
         
-        function animate() {
-          if (spin) {
-            viewer.rotate(1, "y");
-            viewer.render();
-            requestAnimationFrame(animate);
-          }
+      function animate() {
+        if (spin) {
+          viewer.rotate(1, "y");
+          viewer.render();
+          requestAnimationFrame(animate);
         }
-        // Mark loading as complete
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error initializing molecule viewer:", error);
-        setIsLoading(false); // Still mark as not loading to show error state
       }
-    }, 100);
+      
+      // Mark loading as complete
+      setIsLoading(false);
+      
+      // Double check sizing after animations complete
+      setTimeout(() => {
+        if (viewerRef.current && container) {
+          const { width, height } = container.getBoundingClientRect();
+          viewerRef.current.resize(width, height);
+          viewerRef.current.render();
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Error initializing molecule viewer:", error);
+      setIsLoading(false);
+    }
   };
+
+  // Use useLayoutEffect to handle window resize events
+  useLayoutEffect(() => {
+    const handleResize = () => {
+      if (viewerRef.current && viewerContainerRef.current) {
+        const container = viewerContainerRef.current;
+        const { width, height } = container.getBoundingClientRect();
+        viewerRef.current.resize(width, height);
+        viewerRef.current.render();
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Also listen for load event to catch any post-load sizing issues
+    window.addEventListener('load', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('load', handleResize);
+    };
+  }, []);
   
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
@@ -230,21 +315,33 @@ END`;
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
             className="flex flex-col items-center justify-center"
+            onAnimationComplete={() => {
+              // Resize viewer after animation completes
+              if (viewerRef.current && viewerContainerRef.current) {
+                const container = viewerContainerRef.current;
+                const { width, height } = container.getBoundingClientRect();
+                viewerRef.current.resize(width, height);
+                viewerRef.current.render();
+              }
+            }}
           >
             <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-gray-100 w-full max-w-lg">
               <div className="flex items-center gap-2 mb-3">
                 <Beaker className="w-5 h-5 text-primary" />
                 <h3 className="font-medium">Example: Optimized Compound</h3>
               </div>
-              <div className="relative">
+              
+              {/* Container with fixed height */}
+              <div className="w-full h-[350px] relative">
+                {/* The viewer container needs to fill the parent completely */}
                 <div 
                   ref={viewerContainerRef}
-                  className="w-full rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-blue-50"
-                  style={{ height: '350px' }}
+                  className="absolute inset-0 w-full h-full rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-blue-50"
                 />
 
+                {/* Loading overlay positioned absolutely */}
                 {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm rounded-lg">
                     <div className="flex flex-col items-center">
                       <Loader2 className="h-10 w-10 text-primary animate-spin" />
                       <span className="mt-2 text-sm text-gray-600">Loading 3D model...</span>
@@ -252,6 +349,7 @@ END`;
                   </div>
                 )}
               </div>
+              
               <div className="mt-3 text-sm text-gray-600">
                 <p className="font-medium">SMILES: CC(C)(CNC(=O)N1CCCCCCC1)C(=O)Nc1ccc(Br)cc1</p>
                 <p className="mt-1 flex justify-between">
@@ -273,7 +371,7 @@ END`;
             className="flex justify-center items-center"
           >
             <p className="text-sm text-gray-600">
-              Made with <span className="text-red-500">❤</span> by Cloud Catalyst
+              Made with <span className="text-red-500">❤</span> by Cloud Catalysts
             </p>
           </motion.div>
         </div>
