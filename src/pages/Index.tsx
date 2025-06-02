@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, Beaker, Loader2 } from "lucide-react";
+import Header from "../components/Header";
 
 // Declare 3Dmol to avoid TypeScript errors
 declare global {
@@ -15,6 +16,10 @@ const Index = () => {
   const viewerRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const hasSetupResizeObserver = useRef(false);
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
   
   useEffect(() => {
     // Load 3Dmol.js script dynamically
@@ -242,44 +247,8 @@ END`;
         <div className="absolute bottom-[-10%] left-[-5%] w-[30%] h-[30%] rounded-full bg-compound-light/30 blur-3xl" />
       </div>
 
-      {/* Header/Nav */}
-      <header className="container mx-auto py-6 px-4 z-10">
-        <div className="flex justify-between items-center">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex items-center gap-2"
-          >
-            <div className="w-10 h-10 flex items-center justify-center">
-              <img 
-                src="/molgenX-logo.png" 
-                alt="MolGenX Logo" 
-                className="w-10 h-10 object-contain" 
-              />
-            </div>
-            <h1 className="text-xl font-medium">MolGenX</h1>
-          </motion.div>
-          
-          <motion.nav 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <ul className="flex gap-6">
-              <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
-                <Link to="/">Home</Link>
-              </li>
-              <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
-                <Link to="/protein-search">Protein Search</Link>
-              </li>
-              <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
-                <Link to="/about">About</Link>
-              </li>
-            </ul>
-          </motion.nav>
-        </div>
-      </header>
+      {/* Header/Nav with Active Page Highlighting */}
+      <Header />         
 
       {/* Hero Section with 3D Viewer */}
       <main className="flex-grow flex items-center container mx-auto px-4 z-10 py-8">
