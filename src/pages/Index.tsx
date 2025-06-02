@@ -15,41 +15,42 @@ const Index = () => {
 
       {/* Header/Nav */}
       <header className="container mx-auto py-6 px-4 z-10">
-        <div className="flex justify-between items-center">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex items-center gap-2"
-          >
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-              <Beaker className="w-5 h-5 text-primary" />
-            </div>
-            <h1 className="text-xl font-medium">MolGenX</h1>
-          </motion.div>
-          
-          <motion.nav 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <ul className="flex gap-6">
-              <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
-                <a href="#">Home</a>
-              </li>
-              <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
-                <Link to="/protein-search">Protein Search</Link>
-              </li>
-              <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
-                <a href="#">About</a>
-              </li>
-              <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
-                <a href="#">Contact</a>
-              </li>
-            </ul>
-          </motion.nav>
-        </div>
-      </header>
+              <div className="flex justify-between items-center">
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="flex items-center gap-2"
+                >
+                  <div className="w-10 h-10 flex items-center justify-center">
+                    <img 
+                      src="/molgenX-logo.png" 
+                      alt="MolGenX Logo" 
+                      className="w-10 h-10 object-contain" 
+                    />
+                  </div>
+                  <h1 className="text-xl font-medium">MolGenX</h1>
+                </motion.div>
+                
+                <motion.nav 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                  <ul className="flex gap-6">
+                    <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
+                      <Link to="/">Home</Link>
+                    </li>
+                    <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
+                      <Link to="/protein-search">Protein Search</Link>
+                    </li>
+                    <li className="text-sm font-medium hover:text-primary transition-colors duration-200">
+                      <Link to="/about">About</Link>
+                    </li>
+                  </ul>
+                </motion.nav>
+              </div>
+            </header>
 
       {/* Hero Section */}
       <main className="flex-grow flex items-center container mx-auto px-4 z-10">
@@ -80,6 +81,20 @@ const Index = () => {
           </motion.div>
         </div>
       </main>
+      <footer className="py-6">
+        <div className="container mx-auto px-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex justify-center items-center"
+          >
+            <p className="text-sm text-gray-600">
+              Made with <span className="text-red-500">❤</span> by Cloud Catalyst
+            </p>
+          </motion.div>
+        </div>
+      </footer>
     </div>
   );
 };
