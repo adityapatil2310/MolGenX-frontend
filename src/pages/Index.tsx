@@ -264,7 +264,7 @@ END`;
       </main>
       
       {/* Footer */}
-      <footer className="py-6 bg-gradient-to-r from-slate-100 to-blue-50 border-t border-gray-200">
+      <footer className="py-6">
         <div className="container mx-auto px-6">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
