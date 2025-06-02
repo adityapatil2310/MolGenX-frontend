@@ -352,12 +352,6 @@ const About = () => {
         </div>
       </motion.section>
 
-      
-                
-
-      
-              
-
       {/* Links Section - with animations */}
       <motion.section 
         initial={{ opacity: 0, y: 20 }}
@@ -435,7 +429,7 @@ const About = () => {
                   className="flex justify-center items-center"
                 >
                   <p className="text-sm text-gray-600">
-                    Made with <span className="text-red-500">❤</span> by Cloud Catalyst
+                    Made with <span className="text-red-500">❤</span> by Cloud Catalysts
                   </p>
                 </motion.div>
               </div>

@@ -609,7 +609,7 @@ const ProteinSearch: React.FC = () => {
 						className="flex justify-center items-center"
 					  >
 						<p className="text-sm text-gray-600">
-						  Made with <span className="text-red-500">❤</span> by Cloud Catalyst
+						  Made with <span className="text-red-500">❤</span> by Cloud Catalysts
 						</p>
 					  </motion.div>
 					</div>
