@@ -1,1035 +1,306 @@
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Download,
-	ExternalLink,
-	Info,
-	Filter,
-	ArrowUpDown,
-	Sparkles,
-} from "lucide-react";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Slider } from "@/components/ui/slider";
-import LoadingIndicator from "@/components/ui-elements/LoadingIndicator";
-import {
-	Compound,
-	OptimizationResponse,
-	OptimizationWeights,
-} from "@/pages/ProteinSearch";
-import "./CompoundResutls.css";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { Compound, OptimizationResponse } from "@/pages/ProteinSearch";
 
-export interface CompoundResultsProps {
-	compounds: Compound[];
-	isLoading: boolean;
-	proteinInput: string;
-	optimizationResponse: OptimizationResponse | null;
-	weights: OptimizationWeights;
+interface CompoundResultsProps {
+    compounds: Compound[];
+    optimizationResponse: OptimizationResponse | null;
 }
-
-// Define the OptimizedCompound interface that extends Compound
-export interface OptimizedCompound extends Compound {
-	metrics: {
-		druglikeness: number;
-		synthetic_accessibility: number;
-		lipinski_violations: number;
-		toxicity: number;
-		binding_affinity: number;
-		solubility: number;
-	};
-}
-
-const apiUrl = import.meta.env.VITE_API_URL;
 
 const CompoundResults: React.FC<CompoundResultsProps> = ({
-	compounds,
-	isLoading,
-	proteinInput,
-	optimizationResponse,
-	weights,
+    compounds,
+    optimizationResponse,
 }) => {
-	const hasResults = compounds.length > 0;
-	const [displayedCompounds, setDisplayedCompounds] = useState(compounds);
-	const [filterOpen, setFilterOpen] = useState(false);
-	const [sortOpen, setSortOpen] = useState(false);
-	const [optimizationOpen, setOptimizationOpen] = useState(false);
-	const [isOptimizing, setIsOptimizing] = useState(false);
-	const [optimizedCompounds, setOptimizedCompounds] = useState<
-		OptimizedCompound[]
-	>([]);
-	const [explanation, setExplanation] = useState("");
-	const [variantsExplanation, setVariantsExplanation] = useState("");
-	const [showOptimized, setShowOptimized] = useState(false);
-	const [showVariantsExplanation, setShowVariantsExplanation] = useState(false);
-	const { toast } = useToast();
+    const [selectedCompound, setSelectedCompound] = useState<Compound | null>(
+        compounds.length > 0 ? compounds[0] : null
+    );
 
-	const [optimizationWeights, setOptimizationWeights] =
-		useState<OptimizationWeights>({
-			druglikeness: 1.0,
-			synthetic_accessibility: 0.8,
-			lipinski_violations: 0.7,
-			toxicity: 1.2,
-			binding_affinity: 1.5,
-			solubility: 0.6,
-		});
+    // Parse optimized variants to display them
+    const variants = optimizationResponse?.optimized_variants || [];
 
-	const [filters, setFilters] = useState({
-		minLikeliness: 0,
-		maxToxicity: 10,
-		minBindingAffinity: 0,
-		sortBy: "likeliness-desc" as
-			| "likeliness-desc"
-			| "likeliness-asc"
-			| "toxicity-asc"
-			| "toxicity-desc"
-			| "binding-desc"
-			| "binding-asc",
-	});
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6 }}
+            className="mt-8 space-y-8"
+        >
+            <div className="flex flex-col gap-8">
+                <h2 className="text-3xl font-bold tracking-tight">Results</h2>
 
-	// Load explanations from optimizationResponse props when available
-	useEffect(() => {
-		if (optimizationResponse) {
-			setExplanation(optimizationResponse.explanation || "");
-			setVariantsExplanation(optimizationResponse.variants_explanation || "");
-			
-			// If compounds are available, consider them optimized
-			if (compounds.length > 0) {
-				setShowOptimized(true);
-			}
-		}
-	}, [optimizationResponse, compounds]);
+                <Tabs defaultValue="compounds" className="w-full">
+                    <TabsList>
+                        <TabsTrigger value="compounds">
+                            Primary Compounds ({compounds.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="variants">
+                            Variants ({variants.length})
+                        </TabsTrigger>
+                    </TabsList>
 
-	// Update displayed compounds when filters change or when switching between original/optimized
-	useEffect(() => {
-		if (!compounds.length && !optimizedCompounds.length) return;
+                    <TabsContent value="compounds" className="space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Compound List */}
+                            <div className="lg:col-span-1 overflow-auto max-h-[600px]">
+                                <div className="grid gap-3">
+                                    {compounds.map((compound) => (
+                                        <Card
+                                            key={compound.id}
+                                            className={`cursor-pointer transition-all ${
+                                                selectedCompound?.id === compound.id
+                                                    ? "border-primary"
+                                                    : ""
+                                            }`}
+                                            onClick={() => setSelectedCompound(compound)}
+                                        >
+                                            <CardContent className="p-4">
+                                                <div className="flex justify-between items-center">
+                                                    <div>
+                                                        <h3 className="font-medium">
+                                                            {compound.name}
+                                                        </h3>
+                                                        <p className="text-sm text-muted-foreground mt-1">
+                                                            {compound.formula}
+                                                        </p>
+                                                    </div>
+                                                    <Badge
+                                                        variant={
+                                                            compound.id.startsWith("1")
+                                                                ? "default"
+                                                                : "secondary"
+                                                        }
+                                                    >
+                                                        #{compound.id}
+                                                    </Badge>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
 
-		const sourceCompounds = showOptimized ? optimizedCompounds : compounds;
+                            {/* Compound Details and Visualization */}
+                            <div className="lg:col-span-2">
+                                {selectedCompound && (
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        {/* Compound Properties */}
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle>Compound Properties</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <Table>
+                                                    <TableBody>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">
+                                                                Name
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {selectedCompound.name}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">
+                                                                SMILES
+                                                            </TableCell>
+                                                            <TableCell className="break-all">
+                                                                {selectedCompound.structure}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">
+                                                                Molecular Weight
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {selectedCompound.molecularWeight.toFixed(2)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">
+                                                                Binding Affinity
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {selectedCompound.binding_affinity.toFixed(4)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">
+                                                                Druglikeness
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {selectedCompound.likeliness.toFixed(4)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">
+                                                                Toxicity
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {selectedCompound.toxicity.toFixed(4)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">
+                                                                Synthetic Accessibility
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {selectedCompound.synthetic_accessibility.toFixed(2)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">
+                                                                Lipinski Violations
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {selectedCompound.lipinski_violations}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell className="font-medium">
+                                                                Solubility
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {selectedCompound.solubility.toFixed(4)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    </TableBody>
+                                                </Table>
+                                            </CardContent>
+                                        </Card>
 
-		let filtered = [...sourceCompounds].filter(
-			(compound) =>
-				compound.likeliness >= filters.minLikeliness &&
-				compound.toxicity <= filters.maxToxicity &&
-				compound.binding_affinity >= filters.minBindingAffinity
-		);
+                                        {/* Compound Visualization */}
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle>Visualization</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="flex flex-col items-center justify-center">
+                                                {selectedCompound.visualData ? (
+                                                    <div className="flex flex-col items-center space-y-4">
+                                                        {/* 2D Structure */}
+                                                        <div className="w-full bg-white p-4 rounded-lg">
+                                                            <img
+                                                                src={selectedCompound.visualData.images["2d"]}
+                                                                alt={`2D structure of ${selectedCompound.name}`}
+                                                                className="max-w-full h-auto mx-auto"
+                                                            />
+                                                        </div>
 
-		// Sort based on selected option
-		switch (filters.sortBy) {
-			case "likeliness-desc":
-				filtered.sort((a, b) => b.likeliness - a.likeliness);
-				break;
-			case "likeliness-asc":
-				filtered.sort((a, b) => a.likeliness - b.likeliness);
-				break;
-			case "toxicity-desc":
-				filtered.sort((a, b) => b.toxicity - a.toxicity);
-				break;
-			case "toxicity-asc":
-				filtered.sort((a, b) => a.toxicity - b.toxicity);
-				break;
-			case "binding-desc":
-				filtered.sort(
-					(a, b) => b.binding_affinity - a.binding_affinity
-				);
-				break;
-			case "binding-asc":
-				filtered.sort(
-					(a, b) => a.binding_affinity - b.binding_affinity
-				);
-				break;
-		}
+                                                        {/* 3D Structure - Simplified approach */}
+                                                        <div className="w-full h-[300px] bg-gray-100 rounded-lg p-4">
+                                                            <div className="glass rounded-2xl p-4 h-full">
+                                                                <iframe
+                                                                    src={`https://3dmol.org/viewer.html?pdb=data:text/plain;base64,${btoa(selectedCompound.visualData.models.pdb)}&style=stick`}
+                                                                    width="100%"
+                                                                    height="100%"
+                                                                    style={{ border: 'none' }}
+                                                                    title={`3D structure of ${selectedCompound.name}`}
+                                                                ></iframe>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center text-muted-foreground">
+                                                        <p>No visualization data available.</p>
+                                                        <p className="text-sm mt-2">
+                                                            Enable 3D visualizations in the search settings to view molecule structures.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </TabsContent>
 
-		setDisplayedCompounds(filtered);
-	}, [compounds, optimizedCompounds, filters, showOptimized]);
+                    <TabsContent value="variants" className="space-y-6">
+                        <Card>
+                            <CardContent className="p-6">
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-16">Rank</TableHead>
+                                                <TableHead>SMILES</TableHead>
+                                                <TableHead className="w-20">Score</TableHead>
+                                                <TableHead className="w-24">Druglikeness</TableHead>
+                                                <TableHead className="w-20">Toxicity</TableHead>
+                                                <TableHead className="w-28">Binding Affinity</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {variants.map((variant: any) => (
+                                                <TableRow key={variant.rank}>
+                                                    <TableCell className="font-medium">
+                                                        {variant.rank}
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-xs break-all">
+                                                        {variant.smiles}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {variant.score?.toFixed(2) || "N/A"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {variant.druglikeness?.toFixed(2) || "N/A"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {variant.toxicity?.toFixed(2) || "N/A"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {variant.binding_affinity?.toFixed(4) || "N/A"}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+            </div>
 
-	// Function to call the optimization API
-	const optimizeCompounds = async () => {
-		if (!proteinInput) {
-			toast({
-				title: "Missing Protein Data",
-				description:
-					"Please enter a protein sequence or identifier first.",
-				variant: "destructive",
-			});
-			return;
-		}
+            {/* Explanation Sections */}
+            {optimizationResponse && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Compounds Explanation</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="whitespace-pre-line">
+                                {optimizationResponse.explanation}
+                            </p>
+                        </CardContent>
+                    </Card>
 
-		setIsOptimizing(true);
-
-		try {
-			const response = await fetch(`${apiUrl}/api/optimize`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					protein: proteinInput,
-					weights: optimizationWeights,
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error(
-					`Error: ${response.status} ${response.statusText}`
-				);
-			}
-
-			const data = await response.json();
-
-			// Transform API data to match our compound interface
-			const transformedCompounds = data.optimized_compounds.map(
-				(compound: any) => ({
-					id: compound.id || Math.random().toString(36).substr(2, 9),
-					name: compound.name || `Compound-${compound.id || ""}`,
-					formula: compound.smiles || compound.formula || "",
-					likeliness: compound.metrics?.druglikeness || 0,
-					toxicity: compound.metrics?.toxicity || 0,
-					binding_affinity: compound.metrics?.binding_affinity || 0,
-					molecularWeight: compound.metrics?.molecular_weight || 0,
-					structure:
-						compound.visualization_url ||
-						compound.structure ||
-						"https://placeholder.com/molecule.svg",
-					metrics: {
-						druglikeness: compound.metrics?.druglikeness || 0,
-						synthetic_accessibility:
-							compound.metrics?.synthetic_accessibility || 0,
-						lipinski_violations:
-							compound.metrics?.lipinski_violations || 0,
-						toxicity: compound.metrics?.toxicity || 0,
-						binding_affinity:
-							compound.metrics?.binding_affinity || 0,
-						solubility: compound.metrics?.solubility || 0,
-					},
-				})
-			);
-
-			// Store both types of explanations separately
-			setExplanation(data.explanation || "");
-			setVariantsExplanation(data.variants_explanation || "");
-			setOptimizedCompounds(transformedCompounds);
-			setShowOptimized(true);
-
-			toast({
-				title: "Optimization Complete",
-				description: `Found ${transformedCompounds.length} optimized compounds for your target.`,
-			});
-		} catch (error) {
-			console.error("Optimization error:", error);
-			toast({
-				title: "Optimization Failed",
-				description:
-					error instanceof Error
-						? error.message
-						: "Failed to optimize compounds",
-				variant: "destructive",
-			});
-		} finally {
-			setIsOptimizing(false);
-			setOptimizationOpen(false);
-		}
-	};
-
-	// Animation variants
-	const container = {
-		hidden: { opacity: 0 },
-		show: {
-			opacity: 1,
-			transition: {
-				staggerChildren: 0.1,
-			},
-		},
-	};
-
-	const item = {
-		hidden: { opacity: 0, y: 20 },
-		show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-	};
-
-	if (isLoading || isOptimizing) {
-		return (
-			<div className="flex flex-col items-center justify-center py-24">
-				<LoadingIndicator
-					message={
-						isOptimizing
-							? "Optimizing compounds for your target..."
-							: "Searching for compatible compounds..."
-					}
-				/>
-			</div>
-		);
-	}
-
-	if (
-		!hasResults &&
-		!optimizedCompounds.length &&
-		!isLoading &&
-		!isOptimizing
-	) {
-		return (
-			<motion.div
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				className="text-center py-24"
-			>
-				<p className="text-muted-foreground">
-					Enter a protein sequence or identifier and click search to
-					find compatible compounds.
-				</p>
-			</motion.div>
-		);
-	}
-
-	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.5 }}
-			className="pb-16"
-		>
-			<div className="mb-10 text-center">
-				<h2 className="text-2xl font-semibold mb-2">
-					{showOptimized
-						? "Optimized Compounds"
-						: "Compatible Compounds"}
-				</h2>
-				<p className="text-muted-foreground">
-					{displayedCompounds.length ===
-					(showOptimized
-						? optimizedCompounds.length
-						: compounds.length)
-						? `We found ${
-								showOptimized
-									? optimizedCompounds.length
-									: compounds.length
-						  } compounds with potential binding affinity.`
-						: `Showing ${displayedCompounds.length} of ${
-								showOptimized
-									? optimizedCompounds.length
-									: compounds.length
-						  } compounds.`}
-				</p>
-
-				{/* Display AI explanations with toggle option when available */}
-				{(explanation || variantsExplanation) && (
-					<div className="mt-6">
-						<div className="flex justify-center mb-2">
-							<div className="flex rounded-md overflow-hidden border border-input">
-								<Button
-									variant={!showVariantsExplanation ? "default" : "outline"}
-									size="sm"
-									className="rounded-none text-xs"
-									onClick={() => setShowVariantsExplanation(false)}
-								>
-									Compound Analysis
-								</Button>
-								<Button
-									variant={showVariantsExplanation ? "default" : "outline"}
-									size="sm"
-									className="rounded-none text-xs"
-									onClick={() => setShowVariantsExplanation(true)}
-									disabled={!variantsExplanation}
-								>
-									Variants Analysis
-								</Button>
-							</div>
-						</div>
-						<div className="p-4 bg-primary/5 rounded-md text-sm text-left max-h-96 overflow-y-auto">
-							<div className="flex items-center justify-between mb-2">
-								<h3 className="font-medium">AI Analysis:</h3>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="h-6 px-2 text-xs"
-									onClick={() => {
-										// Copy explanation to clipboard
-										const text = showVariantsExplanation ? variantsExplanation : explanation;
-										navigator.clipboard.writeText(text);
-										toast({
-											title: "Copied to clipboard",
-											description: "The analysis has been copied to your clipboard."
-										});
-									}}
-								>
-									Copy text
-								</Button>
-							</div>
-							{/* Display paragraphs with proper formatting */}
-							<div className="space-y-4">
-								{(showVariantsExplanation ? variantsExplanation : explanation)
-									.split("\n\n")
-									.map((para, i) => (
-										<p key={i} className="whitespace-pre-line">
-											{para}
-										</p>
-									))}
-							</div>
-						</div>
-					</div>
-				)}
-
-				{/* Add optimization settings button */}
-				<div className="mt-4">
-					<Dialog
-						open={optimizationOpen}
-						onOpenChange={setOptimizationOpen}
-					>
-						<DialogTrigger asChild>
-							<Button
-								variant="outline"
-								size="sm"
-								className="gap-1"
-							>
-								<Sparkles className="h-4 w-4" />
-								<span>Optimization Settings</span>
-							</Button>
-						</DialogTrigger>
-						<DialogContent className="sm:max-w-[500px]">
-							<DialogHeader>
-								<DialogTitle>Optimization Settings</DialogTitle>
-								<DialogDescription>
-									Adjust parameters for compound optimization
-									during search.
-								</DialogDescription>
-							</DialogHeader>
-							<div className="grid gap-4 py-4">
-								<div className="space-y-2">
-									<Label htmlFor="druglikeness">
-										Drug Likeliness (
-										{optimizationWeights.druglikeness.toFixed(
-											1
-										)}
-										)
-									</Label>
-									<Slider
-										id="druglikeness"
-										value={[
-											optimizationWeights.druglikeness,
-										]}
-										min={0}
-										max={2}
-										step={0.1}
-										onValueChange={(val) =>
-											setOptimizationWeights({
-												...optimizationWeights,
-												druglikeness: val[0],
-											})
-										}
-									/>
-								</div>
-
-								<div className="space-y-2">
-									<Label htmlFor="synthetic_accessibility">
-										Synthetic Accessibility (
-										{optimizationWeights.synthetic_accessibility.toFixed(
-											1
-										)}
-										)
-									</Label>
-									<Slider
-										id="synthetic_accessibility"
-										value={[
-											optimizationWeights.synthetic_accessibility,
-										]}
-										min={0}
-										max={2}
-										step={0.1}
-										onValueChange={(val) =>
-											setOptimizationWeights({
-												...optimizationWeights,
-												synthetic_accessibility: val[0],
-											})
-										}
-									/>
-								</div>
-
-								<div className="space-y-2">
-									<Label htmlFor="lipinski_violations">
-										Lipinski Violations (
-										{optimizationWeights.lipinski_violations.toFixed(
-											1
-										)}
-										)
-									</Label>
-									<Slider
-										id="lipinski_violations"
-										value={[
-											optimizationWeights.lipinski_violations,
-										]}
-										min={0}
-										max={2}
-										step={0.1}
-										onValueChange={(val) =>
-											setOptimizationWeights({
-												...optimizationWeights,
-												lipinski_violations: val[0],
-											})
-										}
-									/>
-								</div>
-
-								<div className="space-y-2">
-									<Label htmlFor="toxicity">
-										Toxicity (
-										{optimizationWeights.toxicity.toFixed(
-											1
-										)}
-										)
-									</Label>
-									<Slider
-										id="toxicity"
-										value={[optimizationWeights.toxicity]}
-										min={0}
-										max={2}
-										step={0.1}
-										onValueChange={(val) =>
-											setOptimizationWeights({
-												...optimizationWeights,
-												toxicity: val[0],
-											})
-										}
-									/>
-								</div>
-
-								<div className="space-y-2">
-									<Label htmlFor="binding_affinity">
-										Binding Affinity (
-										{optimizationWeights.binding_affinity.toFixed(
-											1
-										)}
-										)
-									</Label>
-									<Slider
-										id="binding_affinity"
-										value={[
-											optimizationWeights.binding_affinity,
-										]}
-										min={0}
-										max={2}
-										step={0.1}
-										onValueChange={(val) =>
-											setOptimizationWeights({
-												...optimizationWeights,
-												binding_affinity: val[0],
-											})
-										}
-									/>
-								</div>
-
-								<div className="space-y-2">
-									<Label htmlFor="solubility">
-										Solubility (
-										{optimizationWeights.solubility.toFixed(
-											1
-										)}
-										)
-									</Label>
-									<Slider
-										id="solubility"
-										value={[optimizationWeights.solubility]}
-										min={0}
-										max={2}
-										step={0.1}
-										onValueChange={(val) =>
-											setOptimizationWeights({
-												...optimizationWeights,
-												solubility: val[0],
-											})
-										}
-									/>
-								</div>
-							</div>
-							<DialogFooter>
-									<Button 
-										variant="default"
-										onClick={optimizeCompounds}
-										disabled={isOptimizing}
-									>
-										{isOptimizing ? "Optimizing..." : "Run Optimization"}
-									</Button>
-								<Button
-									variant="outline"
-									onClick={() => setOptimizationOpen(false)}
-								>
-									Close
-								</Button>
-							</DialogFooter>
-						</DialogContent>
-					</Dialog>
-				</div>
-			</div>
-
-			<div className="mb-8 flex flex-wrap gap-4">
-				{/* Tab buttons to switch between original and optimized compounds */}
-				{optimizedCompounds.length > 0 && (
-					<div className="flex rounded-md overflow-hidden border border-input">
-						<Button
-							variant={showOptimized ? "outline" : "default"}
-							className="rounded-none"
-							onClick={() => setShowOptimized(false)}
-						>
-							Original Results
-						</Button>
-						<Button
-							variant={showOptimized ? "default" : "outline"}
-							className="rounded-none"
-							onClick={() => setShowOptimized(true)}
-						>
-							Optimized Results
-						</Button>
-					</div>
-				)}
-
-				<Button
-					variant="outline"
-					className="flex items-center gap-2"
-					onClick={() => setFilterOpen(!filterOpen)}
-				>
-					<Filter className="h-4 w-4" />
-					<span>Filter Compounds</span>
-				</Button>
-
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button
-							variant="outline"
-							className="flex items-center gap-2"
-						>
-							<ArrowUpDown className="h-4 w-4" />
-							<span>Sort Compounds</span>
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="start" className="w-56">
-						<DropdownMenuItem
-							onClick={() =>
-								setFilters({
-									...filters,
-									sortBy: "likeliness-desc",
-								})
-							}
-							className={
-								filters.sortBy === "likeliness-desc"
-									? "bg-primary/10"
-									: ""
-							}
-						>
-							Highest Drug Likeliness
-						</DropdownMenuItem>
-						<DropdownMenuItem
-							onClick={() =>
-								setFilters({
-									...filters,
-									sortBy: "likeliness-asc",
-								})
-							}
-							className={
-								filters.sortBy === "likeliness-asc"
-									? "bg-primary/10"
-									: ""
-							}
-						>
-							Lowest Drug Likeliness
-						</DropdownMenuItem>
-						<DropdownMenuItem
-							onClick={() =>
-								setFilters({
-									...filters,
-									sortBy: "toxicity-asc",
-								})
-							}
-							className={
-								filters.sortBy === "toxicity-asc"
-									? "bg-primary/10"
-									: ""
-							}
-						>
-							Lowest Toxicity
-						</DropdownMenuItem>
-						<DropdownMenuItem
-							onClick={() =>
-								setFilters({
-									...filters,
-									sortBy: "toxicity-desc",
-								})
-							}
-							className={
-								filters.sortBy === "toxicity-desc"
-									? "bg-primary/10"
-									: ""
-							}
-						>
-							Highest Toxicity
-						</DropdownMenuItem>
-						<DropdownMenuItem
-							onClick={() =>
-								setFilters({
-									...filters,
-									sortBy: "binding-desc",
-								})
-							}
-							className={
-								filters.sortBy === "binding-desc"
-									? "bg-primary/10"
-									: ""
-							}
-						>
-							Highest Binding Affinity
-						</DropdownMenuItem>
-						<DropdownMenuItem
-							onClick={() =>
-								setFilters({
-									...filters,
-									sortBy: "binding-asc",
-								})
-							}
-							className={
-								filters.sortBy === "binding-asc"
-									? "bg-primary/10"
-									: ""
-							}
-						>
-							Lowest Binding Affinity
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</div>
-
-			<AnimatePresence>
-				{filterOpen && (
-					<motion.div
-						initial={{ height: 0, opacity: 0 }}
-						animate={{ height: "auto", opacity: 1 }}
-						exit={{ height: 0, opacity: 0 }}
-						className="bg-card border rounded-md p-4 overflow-hidden shadow-sm mb-4"
-					>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-							<div className="space-y-2">
-								<label className="text-sm font-medium">
-									Minimum Drug Likeliness
-								</label>
-								<div className="flex items-center gap-4">
-									<Slider
-										value={[filters.minLikeliness]}
-										min={0}
-										max={10}
-										step={0.1}
-										onValueChange={(value) =>
-											setFilters({
-												...filters,
-												minLikeliness: value[0],
-											})
-										}
-									/>
-									<span className="text-sm font-medium w-12 text-right">
-										{filters.minLikeliness.toFixed(1)}
-									</span>
-								</div>
-							</div>
-
-							<div className="space-y-2">
-								<label className="text-sm font-medium">
-									Maximum Toxicity
-								</label>
-								<div className="flex items-center gap-4">
-									<Slider
-										value={[filters.maxToxicity]}
-										min={0}
-										max={10}
-										step={0.1}
-										onValueChange={(value) =>
-											setFilters({
-												...filters,
-												maxToxicity: value[0],
-											})
-										}
-									/>
-									<span className="text-sm font-medium w-12 text-right">
-										{filters.maxToxicity.toFixed(1)}
-									</span>
-								</div>
-							</div>
-
-							<div className="space-y-2">
-								<label className="text-sm font-medium">
-									Minimum Binding Affinity
-								</label>
-								<div className="flex items-center gap-4">
-									<Slider
-										value={[filters.minBindingAffinity]}
-										min={0}
-										max={10}
-										step={0.1}
-										onValueChange={(value) =>
-											setFilters({
-												...filters,
-												minBindingAffinity: value[0],
-											})
-										}
-									/>
-									<span className="text-sm font-medium w-12 text-right">
-										{filters.minBindingAffinity.toFixed(1)}
-									</span>
-								</div>
-							</div>
-						</div>
-					</motion.div>
-				)}
-			</AnimatePresence>
-
-			<motion.div
-				variants={container}
-				initial="hidden"
-				animate="show"
-				className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-			>
-				{displayedCompounds.map((compound) => (
-					<motion.div key={compound.id} variants={item}>
-						<CompoundCard
-							compound={compound}
-							isOptimized={showOptimized}
-						/>
-					</motion.div>
-				))}
-			</motion.div>
-		</motion.div>
-	);
-};
-
-const CompoundCard: React.FC<{
-	compound: Compound | OptimizedCompound;
-	isOptimized?: boolean;
-}> = ({ compound, isOptimized = false }) => {
-	const [isFlipped, setIsFlipped] = useState(false);
-
-	// Check if this is an optimized compound with metrics
-	const hasMetrics = "metrics" in compound;
-
-	return (
-		<div className={`card-container ${isFlipped ? "flipped" : ""}`}>
-			<Card className="card-front overflow-hidden transition-all duration-300 hover:shadow-md bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-800 h-full flex flex-col">
-				<CardHeader className="pb-2">
-					<div className="flex justify-between items-start">
-						<div>
-							<CardTitle className="text-lg flex items-center gap-2">
-								{compound.name}
-								{isOptimized && (
-									<TooltipProvider>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<span className="inline-flex">
-													<Sparkles className="h-4 w-4 text-primary" />
-												</span>
-											</TooltipTrigger>
-											<TooltipContent>
-												<p>Optimized compound</p>
-											</TooltipContent>
-										</Tooltip>
-									</TooltipProvider>
-								)}
-							</CardTitle>
-							<CardDescription>
-								{compound.formula}
-							</CardDescription>
-						</div>
-						<TooltipProvider>
-							<Tooltip>
-								<TooltipTrigger>
-									<div className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs font-semibold whitespace-nowrap">
-										DL: {compound.likeliness.toFixed(1)}
-									</div>
-								</TooltipTrigger>
-								<TooltipContent>
-									<p>Drug Likeliness: {compound.likeliness.toFixed(2)}</p>
-								</TooltipContent>
-							</Tooltip>
-						</TooltipProvider>
-					</div>
-				</CardHeader>
-				<CardContent className="flex-grow pb-2">
-					<div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-md mb-4 overflow-hidden flex items-center justify-center p-2">
-						<img
-							src={compound.structure}
-							alt={`Structure of ${compound.name}`}
-							className="w-full h-full object-contain"
-						/>
-					</div>
-				</CardContent>
-				<CardFooter className="pt-2">
-					<div className="flex justify-between w-full">
-						<TooltipProvider>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<Button
-										variant="outline"
-										size="sm"
-										className="gap-1"
-										onClick={() => setIsFlipped(!isFlipped)}
-									>
-										<Info className="h-3.5 w-3.5" />
-										<span className="text-xs">Details</span>
-									</Button>
-								</TooltipTrigger>
-								<TooltipContent>
-									<p>View detailed information</p>
-								</TooltipContent>
-							</Tooltip>
-						</TooltipProvider>
-
-						<TooltipProvider>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<Button
-										variant="outline"
-										size="sm"
-										className="gap-1"
-									>
-										<Download className="h-3.5 w-3.5" />
-										<span className="text-xs">
-											Download
-										</span>
-									</Button>
-								</TooltipTrigger>
-								<TooltipContent>
-									<p>Download structure file</p>
-								</TooltipContent>
-							</Tooltip>
-						</TooltipProvider>
-					</div>
-				</CardFooter>
-			</Card>
-
-			<Card className="card-back overflow-hidden transition-all duration-300 hover:shadow-md bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-800 h-full flex flex-col">
-				<CardHeader className="pb-2">
-					<div className="flex justify-between items-start">
-						<div>
-							<CardTitle className="text-lg flex items-center gap-2">
-								{compound.name} - Details
-								{isOptimized && (
-									<Sparkles className="h-4 w-4 text-primary" />
-								)}
-							</CardTitle>
-							<CardDescription>
-								{compound.formula}
-							</CardDescription>
-						</div>
-						<div className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs font-semibold">
-							DL: {compound.likeliness.toFixed(1)}
-						</div>
-					</div>
-				</CardHeader>
-				<CardContent className="flex-grow pb-2">
-					<div className="space-y-2">
-						<h3 className="text-sm font-medium">
-							Compound Properties
-						</h3>
-						<ul className="list-none space-y-1 text-sm">
-							<li className="flex justify-between">
-								<span>Drug Likeliness:</span>
-								<span className="font-medium">
-									{compound.likeliness.toFixed(2)}
-								</span>
-							</li>
-							<li className="flex justify-between">
-								<span>Synthetic Accessibility:</span>
-								<span className="font-medium">
-									{hasMetrics
-										? (
-												compound as OptimizedCompound
-										  ).metrics.synthetic_accessibility.toFixed(
-												2
-										  )
-										: "10.0"}
-								</span>
-							</li>
-							<li className="flex justify-between">
-								<span>Lipinski Violations:</span>
-								<span className="font-medium">
-									{hasMetrics
-										? (
-												compound as OptimizedCompound
-										  ).metrics.lipinski_violations.toFixed(
-												0
-										  )
-										: "4"}
-								</span>
-							</li>
-							<li className="flex justify-between">
-								<span>Toxicity:</span>
-								<span className="font-medium">
-									{compound.toxicity.toFixed(2)}
-								</span>
-							</li>
-							<li className="flex justify-between">
-								<span>Binding Affinity:</span>
-								<span className="font-medium">
-									{compound.binding_affinity.toFixed(2)}
-								</span>
-							</li>
-							<li className="flex justify-between">
-								<span>Solubility:</span>
-								<span className="font-medium">
-									{hasMetrics
-										? (
-												compound as OptimizedCompound
-										  ).metrics.solubility.toFixed(2)
-										: "-5.0"}
-								</span>
-							</li>
-						</ul>
-					</div>
-				</CardContent>
-				<CardFooter className="pt-2">
-					<Button
-						variant="outline"
-						size="sm"
-						className="gap-1"
-						onClick={() => setIsFlipped(!isFlipped)}
-					>
-						<span className="text-xs">Back</span>
-					</Button>
-				</CardFooter>
-			</Card>
-		</div>
-	);
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Variants Explanation</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="whitespace-pre-line">
+                                {optimizationResponse.variants_explanation}
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+        </motion.div>
+    );
 };
 
 export default CompoundResults;

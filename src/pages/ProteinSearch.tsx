@@ -21,17 +21,25 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 
 export interface Compound {
-	id: string;
-	name: string;
-	formula: string;
-	molecularWeight: number;
-	toxicity: number;
-	likeliness: number;
-	binding_affinity: number;
-	structure: string;
-	synthetic_accessibility: number;
-	lipinski_violations: number;
-	solubility: number;
+    id: string;
+    name: string;
+    formula: string;
+    molecularWeight: number;
+    toxicity: number;
+    likeliness: number;
+    binding_affinity: number;
+    structure: string;
+    synthetic_accessibility: number;
+    lipinski_violations: number;
+    solubility: number;
+    visualData?: {
+        images: {
+            "2d": string;
+        };
+        models: {
+            pdb: string;
+        };
+    };
 }
 
 export interface OptimizationWeights {
@@ -44,34 +52,47 @@ export interface OptimizationWeights {
 }
 
 export interface OptimizationResponse {
-	optimized_compounds: any[];
-	explanation: string;
-	optimized_variants: any[];
-	variants_explanation: string;
+    optimized_compounds: any[];
+    explanation: string;
+    optimized_variants: any[];
+    variants_explanation: string;
+    compound_visualization?: {
+        compounds: {
+            id: number;
+            images: {
+                "2d": string;
+            };
+            models: {
+                pdb: string;
+            };
+        }[];
+    };
 }
 
 const ProteinSearch: React.FC = () => {
 	const [proteinInput, setProteinInput] = useState("");
-	const [isLoading, setIsLoading] = useState(false);
-	const [compounds, setCompounds] = useState<Compound[]>([]);
-	const [optimizationResponse, setOptimizationResponse] =
-		useState<OptimizationResponse | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	const [showWeightsDialog, setShowWeightsDialog] = useState(false);
-	const { toast } = useToast();
+    const [proteinSequence, setProteinSequence] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [compounds, setCompounds] = useState<Compound[]>([]);
+    const [optimizationResponse, setOptimizationResponse] =
+        useState<OptimizationResponse | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [showWeightsDialog, setShowWeightsDialog] = useState(false);
+    const [generateVisualizations, setGenerateVisualizations] = useState(true);
+    const { toast } = useToast();
 
-	// Fixed API URL - make sure this matches your environment variables
-	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    // Fixed API URL - make sure this matches your environment variables
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 	const [optimizationWeights, setOptimizationWeights] =
-		useState<OptimizationWeights>({
-			druglikeness: 1.0,
-			synthetic_accessibility: 0.8,
-			lipinski_violations: 0.7,
-			toxicity: 1.2,
-			binding_affinity: 1.5,
-			solubility: 0.6,
-		});
+        useState<OptimizationWeights>({
+            druglikeness: 1.0,
+            synthetic_accessibility: 0.8,
+            lipinski_violations: 0.7,
+            toxicity: 1.2,
+            binding_affinity: 1.5,
+            solubility: 0.6,
+        });
 
 	// Sample data for Human Haemoglobin
 	const humanHaemoglobinExample = "1HHO"; // PDB ID for Human Haemoglobin
@@ -96,95 +117,125 @@ const ProteinSearch: React.FC = () => {
 	};
 
 	const handleSearch = async () => {
-		setIsLoading(true);
-		setError(null);
-		// Close the weights dialog
-		setShowWeightsDialog(false);
+        setIsLoading(true);
+        setError(null);
+        // Close the weights dialog
+        setShowWeightsDialog(false);
 
-		console.log("Sending request to:", `${apiUrl}/api/optimize`);
-		console.log("Request body:", {
-			protein: proteinInput,
-			weights: optimizationWeights,
-		});
+		// Prepare the request payload according to the required format
+        const requestPayload = {
+            pdb_id: proteinInput,
+            protein: proteinSequence,  // Add protein sequence if available
+            weights: optimizationWeights,
+            generate_visualizations: generateVisualizations
+        };
+
+        console.log("Sending request to:", `${apiUrl}/api/optimize`);
+        console.log("Request body:", requestPayload);
 
 		try {
-			// Call the optimize API endpoint
-			const optimizeResponse = await fetch(`${apiUrl}/api/optimize`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Accept: "application/json",
-				},
-				credentials: "include", // Include cookies if needed
-				body: JSON.stringify({
-					protein: proteinInput,
-					weights: optimizationWeights,
-				}),
-			});
+            // Call the optimize API endpoint
+            const optimizeResponse = await fetch(`${apiUrl}/api/optimize`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                credentials: "include", // Include cookies if needed
+                body: JSON.stringify(requestPayload),
+            });
 
 			console.log("Response status:", optimizeResponse.status);
 
 			// Try to get response text for debugging
-			const responseText = await optimizeResponse.text();
-			console.log("Response text:", responseText);
+            const responseText = await optimizeResponse.text();
+            console.log("Response text:", responseText);
 
-			if (!optimizeResponse.ok) {
-				throw new Error(
-					`Optimization failed: ${optimizeResponse.status} ${optimizeResponse.statusText}. Response: ${responseText}`
-				);
-			}
+            if (!optimizeResponse.ok) {
+                throw new Error(
+                    `Optimization failed: ${optimizeResponse.status} ${optimizeResponse.statusText}. Response: ${responseText}`
+                );
+            }
 
 			// Parse the JSON from the text response
-			const responseData = responseText ? JSON.parse(responseText) : {};
-			console.log("Parsed response data:", responseData);
+            const responseData = responseText ? JSON.parse(responseText) : {};
+            console.log("Parsed response data:", responseData);
 
 			// The API returns optimized_compounds as a JSON string, so we need to parse it
-			let parsedOptimizedCompounds = [];
+            let parsedOptimizedCompounds = [];
 
 			if (responseData.optimized_compounds) {
-				try {
-					// Try to parse the optimized_compounds string if it's a string
-					if (typeof responseData.optimized_compounds === "string") {
-						parsedOptimizedCompounds = JSON.parse(
-							responseData.optimized_compounds
-						);
-					} else {
-						// If it's already an array, use it directly
-						parsedOptimizedCompounds =
-							responseData.optimized_compounds;
-					}
+                try {
+                    // Try to parse the optimized_compounds string if it's a string
+                    if (typeof responseData.optimized_compounds === "string") {
+                        parsedOptimizedCompounds = JSON.parse(
+                            responseData.optimized_compounds
+                        );
+                    } else {
+                        // If it's already an array, use it directly
+                        parsedOptimizedCompounds =
+                            responseData.optimized_compounds;
+                    }
 
-					console.log("Parsed compounds:", parsedOptimizedCompounds);
-				} catch (parseError) {
-					console.error(
-						"Error parsing optimized_compounds:",
-						parseError
-					);
-				}
-			}
+                    console.log("Parsed compounds:", parsedOptimizedCompounds);
+                } catch (parseError) {
+                    console.error(
+                        "Error parsing optimized_compounds:",
+                        parseError
+                    );
+                }
+            }
+			// Parse optimized_variants if it's a string
+            let parsedOptimizedVariants = [];
+            if (responseData.optimized_variants) {
+                try {
+                    if (typeof responseData.optimized_variants === "string") {
+                        parsedOptimizedVariants = JSON.parse(
+                            responseData.optimized_variants
+                        );
+                    } else {
+                        parsedOptimizedVariants = responseData.optimized_variants;
+                    }
+                } catch (parseError) {
+                    console.error(
+                        "Error parsing optimized_variants:",
+                        parseError
+                    );
+                }
+            }
 
 			// Create a proper optimizationResponse object with parsed compounds
-			const formattedResponse = {
-				...responseData,
-				optimized_compounds: parsedOptimizedCompounds,
-				// Also parse optimized_variants if present and a string
-				optimized_variants:
-					responseData.optimized_variants &&
-					typeof responseData.optimized_variants === "string"
-						? JSON.parse(responseData.optimized_variants)
-						: responseData.optimized_variants || [],
-			};
-
+            const formattedResponse = {
+                ...responseData,
+                optimized_compounds: parsedOptimizedCompounds,
+                optimized_variants: parsedOptimizedVariants,
+                compound_visualization: responseData.compound_visualization || null,
+            };
 			// Store the complete optimization response with properly parsed arrays
-			setOptimizationResponse(formattedResponse);
+            setOptimizationResponse(formattedResponse);
 
 			// Map the parsed compounds to our application's Compound interface
 			if (
-				parsedOptimizedCompounds &&
-				Array.isArray(parsedOptimizedCompounds)
-			) {
-				setCompounds(
-					parsedOptimizedCompounds.map((compound: any) => ({
+                parsedOptimizedCompounds &&
+                Array.isArray(parsedOptimizedCompounds)
+            ) {
+				// Log the visualization data for debugging
+				console.log("Visualization data:", formattedResponse.compound_visualization);
+				
+				const mappedCompounds = parsedOptimizedCompounds.map((compound: any) => {
+					// For debugging
+					console.log(`Mapping compound rank ${compound.rank}, looking for matching viz`);
+					
+					// Find matching visualization by rank/id
+					const visualData = generateVisualizations && formattedResponse.compound_visualization ? 
+						formattedResponse.compound_visualization.compounds.find(
+							(vis) => vis.id === compound.rank
+						) : null;
+						
+					// Log whether we found a match
+					console.log(`Visualization data for compound ${compound.rank}:`, visualData);
+					
+					return {
 						id:
 							compound.rank?.toString() ||
 							Math.random().toString(36).substring(7),
@@ -200,43 +251,50 @@ const ProteinSearch: React.FC = () => {
 						lipinski_violations: compound.lipinski_violations || 0,
 						solubility: compound.solubility || 0,
 						structure: compound.smiles || "",
-					}))
-				);
+						// Add visualization data if available
+						visualData: visualData
+					};
+				});
+				// Log the final mapped compounds with visualization data
+				console.log("Mapped compounds with visualization:", mappedCompounds);
+				
+				setCompounds(mappedCompounds);
 
 				toast({
 					title: "Search Complete",
 					description: `Found ${parsedOptimizedCompounds.length} optimized compounds for your protein`,
 				});
-			} else {
-				setCompounds([]);
-				setError("No compound data found in the API response");
+                
+            } else {
+                setCompounds([]);
+                setError("No compound data found in the API response");
 
-				toast({
-					title: "No Compounds Found",
-					description:
-						"The search completed but no compounds were found",
-					variant: "destructive",
-				});
+                toast({
+                    title: "No Compounds Found",
+                    description:
+                        "The search completed but no compounds were found",
+                    variant: "destructive",
+                });
 			}
-		} catch (error) {
-			console.error("Optimization error:", error);
-			setError(
-				error instanceof Error
-					? error.message
-					: "Failed to find optimized compounds"
-			);
-			toast({
-				title: "Optimization Failed",
-				description:
-					error instanceof Error
-						? error.message
-						: "Failed to find optimized compounds",
-				variant: "destructive",
-			});
-		} finally {
-			setIsLoading(false);
-		}
-	};
+		 } catch (error) {
+            console.error("Optimization error:", error);
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to find optimized compounds"
+            );
+            toast({
+                title: "Optimization Failed",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to find optimized compounds",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
 	return (
 		<div className="min-h-screen px-4 sm:px-6 lg:px-8 overflow-hidden">
@@ -356,212 +414,230 @@ const ProteinSearch: React.FC = () => {
 					</div>
 				</div>
 
-				{/* Optimization Weights Dialog */}
 				<Dialog
-					open={showWeightsDialog}
-					onOpenChange={setShowWeightsDialog}
-				>
-					<DialogContent className="sm:max-w-[500px]">
-						<DialogHeader>
-							<DialogTitle>Optimization Weights</DialogTitle>
-							<DialogDescription>
-								Adjust the importance of different properties
-								for compound optimization. Higher values give
-								more importance to that property.
-							</DialogDescription>
-						</DialogHeader>
+                    open={showWeightsDialog}
+                    onOpenChange={setShowWeightsDialog}
+                >
+                    <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                            <DialogTitle>Optimization Settings</DialogTitle>
+                            <DialogDescription>
+                                Adjust the importance of different properties
+                                for compound optimization and visualization options.
+                            </DialogDescription>
+                        </DialogHeader>
 						<div className="grid gap-4 py-4">
-							<div className="space-y-2">
-								<Label
-									htmlFor="druglikeness"
-									className="flex justify-between"
-								>
-									<span>Drug Likeliness</span>
-									<span className="text-muted-foreground">
-										{optimizationWeights.druglikeness.toFixed(
-											1
-										)}
-									</span>
-								</Label>
-								<Slider
-									id="druglikeness"
-									value={[optimizationWeights.druglikeness]}
-									min={0}
-									max={2}
-									step={0.1}
-									onValueChange={(val) =>
-										setOptimizationWeights({
-											...optimizationWeights,
-											druglikeness: val[0],
-										})
-									}
-								/>
-							</div>
+                            {/* Generate visualizations toggle */}
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="generate_visualizations">
+                                    Generate 3D Visualizations
+                                </Label>
+                                <div className="flex items-center space-x-2">
+                                    <input 
+                                        type="checkbox" 
+                                        id="generate_visualizations"
+                                        checked={generateVisualizations}
+                                        onChange={(e) => setGenerateVisualizations(e.target.checked)}
+                                        className="h-4 w-4"
+                                    />
+                                    <Label htmlFor="generate_visualizations" className="text-sm text-muted-foreground">
+                                        {generateVisualizations ? "Enabled" : "Disabled"}
+                                    </Label>
+                                </div>
+                            </div>
+							{/* Weight sliders */}
+                            <div className="space-y-2">
+                                <Label
+                                    htmlFor="druglikeness"
+                                    className="flex justify-between"
+                                >
+                                    <span>Druglikeness</span>
+                                    <span className="text-muted-foreground">
+                                        {optimizationWeights.druglikeness.toFixed(1)}
+                                    </span>
+                                </Label>
+                                <Slider
+                                    id="druglikeness"
+                                    value={[optimizationWeights.druglikeness]}
+                                    min={0}
+                                    max={2}
+                                    step={0.1}
+                                    onValueChange={(val) =>
+                                        setOptimizationWeights({
+                                            ...optimizationWeights,
+                                            druglikeness: val[0],
+                                        })
+                                    }
+                                />
+                            </div>
 
 							<div className="space-y-2">
-								<Label
-									htmlFor="synthetic_accessibility"
-									className="flex justify-between"
-								>
-									<span>Synthetic Accessibility</span>
-									<span className="text-muted-foreground">
-										{optimizationWeights.synthetic_accessibility.toFixed(
-											1
-										)}
-									</span>
-								</Label>
-								<Slider
-									id="synthetic_accessibility"
-									value={[
-										optimizationWeights.synthetic_accessibility,
-									]}
-									min={0}
-									max={2}
-									step={0.1}
-									onValueChange={(val) =>
-										setOptimizationWeights({
-											...optimizationWeights,
-											synthetic_accessibility: val[0],
-										})
-									}
-								/>
-							</div>
+                                <Label
+                                    htmlFor="synthetic_accessibility"
+                                    className="flex justify-between"
+                                >
+                                    <span>Synthetic Accessibility</span>
+                                    <span className="text-muted-foreground">
+                                        {optimizationWeights.synthetic_accessibility.toFixed(1)}
+                                    </span>
+                                </Label>
+                                <Slider
+                                    id="synthetic_accessibility"
+                                    value={[optimizationWeights.synthetic_accessibility]}
+                                    min={0}
+                                    max={2}
+                                    step={0.1}
+                                    onValueChange={(val) =>
+                                        setOptimizationWeights({
+                                            ...optimizationWeights,
+                                            synthetic_accessibility: val[0],
+                                        })
+                                    }
+                                />
+                            </div>
 
 							<div className="space-y-2">
-								<Label
-									htmlFor="lipinski_violations"
-									className="flex justify-between"
-								>
-									<span>Lipinski Violations</span>
-									<span className="text-muted-foreground">
-										{optimizationWeights.lipinski_violations.toFixed(
-											1
-										)}
-									</span>
-								</Label>
-								<Slider
-									id="lipinski_violations"
-									value={[
-										optimizationWeights.lipinski_violations,
-									]}
-									min={0}
-									max={2}
-									step={0.1}
-									onValueChange={(val) =>
-										setOptimizationWeights({
-											...optimizationWeights,
-											lipinski_violations: val[0],
-										})
-									}
-								/>
-							</div>
+                                <Label
+                                    htmlFor="lipinski_violations"
+                                    className="flex justify-between"
+                                >
+                                    <span>Lipinski Violations</span>
+                                    <span className="text-muted-foreground">
+                                        {optimizationWeights.lipinski_violations.toFixed(1)}
+                                    </span>
+                                </Label>
+                                <Slider
+                                    id="lipinski_violations"
+                                    value={[optimizationWeights.lipinski_violations]}
+                                    min={0}
+                                    max={2}
+                                    step={0.1}
+                                    onValueChange={(val) =>
+                                        setOptimizationWeights({
+                                            ...optimizationWeights,
+                                            lipinski_violations: val[0],
+                                        })
+                                    }
+                                />
+                            </div>
+							
+							<div className="space-y-2">
+                                <Label
+                                    htmlFor="toxicity"
+                                    className="flex justify-between"
+                                >
+                                    <span>Toxicity</span>
+                                    <span className="text-muted-foreground">
+                                        {optimizationWeights.toxicity.toFixed(1)}
+                                    </span>
+                                </Label>
+                                <Slider
+                                    id="toxicity"
+                                    value={[optimizationWeights.toxicity]}
+                                    min={0}
+                                    max={2}
+                                    step={0.1}
+                                    onValueChange={(val) =>
+                                        setOptimizationWeights({
+                                            ...optimizationWeights,
+                                            toxicity: val[0],
+                                        })
+                                    }
+                                />
+                            </div>
 
 							<div className="space-y-2">
-								<Label
-									htmlFor="toxicity"
-									className="flex justify-between"
-								>
-									<span>Toxicity</span>
-									<span className="text-muted-foreground">
-										{optimizationWeights.toxicity.toFixed(
-											1
-										)}
-									</span>
-								</Label>
-								<Slider
-									id="toxicity"
-									value={[optimizationWeights.toxicity]}
-									min={0}
-									max={2}
-									step={0.1}
-									onValueChange={(val) =>
-										setOptimizationWeights({
-											...optimizationWeights,
-											toxicity: val[0],
-										})
-									}
-								/>
-							</div>
+                                <Label
+                                    htmlFor="binding_affinity"
+                                    className="flex justify-between"
+                                >
+                                    <span>Binding Affinity</span>
+                                    <span className="text-muted-foreground">
+                                        {optimizationWeights.binding_affinity.toFixed(1)}
+                                    </span>
+                                </Label>
+                                <Slider
+                                    id="binding_affinity"
+                                    value={[optimizationWeights.binding_affinity]}
+                                    min={0}
+                                    max={2}
+                                    step={0.1}
+                                    onValueChange={(val) =>
+                                        setOptimizationWeights({
+                                            ...optimizationWeights,
+                                            binding_affinity: val[0],
+                                        })
+                                    }
+                                />
+                            </div>
 
 							<div className="space-y-2">
-								<Label
-									htmlFor="binding_affinity"
-									className="flex justify-between"
-								>
-									<span>Binding Affinity</span>
-									<span className="text-muted-foreground">
-										{optimizationWeights.binding_affinity.toFixed(
-											1
-										)}
-									</span>
-								</Label>
-								<Slider
-									id="binding_affinity"
-									value={[
-										optimizationWeights.binding_affinity,
-									]}
-									min={0}
-									max={2}
-									step={0.1}
-									onValueChange={(val) =>
-										setOptimizationWeights({
-											...optimizationWeights,
-											binding_affinity: val[0],
-										})
-									}
-								/>
-							</div>
-
-							<div className="space-y-2">
-								<Label
-									htmlFor="solubility"
-									className="flex justify-between"
-								>
-									<span>Solubility</span>
-									<span className="text-muted-foreground">
-										{optimizationWeights.solubility.toFixed(
-											1
-										)}
-									</span>
-								</Label>
-								<Slider
-									id="solubility"
-									value={[optimizationWeights.solubility]}
-									min={0}
-									max={2}
-									step={0.1}
-									onValueChange={(val) =>
-										setOptimizationWeights({
-											...optimizationWeights,
-											solubility: val[0],
-										})
-									}
-								/>
-							</div>
+                                <Label
+                                    htmlFor="solubility"
+                                    className="flex justify-between"
+                                >
+                                    <span>Solubility</span>
+                                    <span className="text-muted-foreground">
+                                        {optimizationWeights.solubility.toFixed(1)}
+                                    </span>
+                                </Label>
+                                <Slider
+                                    id="solubility"
+                                    value={[optimizationWeights.solubility]}
+                                    min={0}
+                                    max={2}
+                                    step={0.1}
+                                    onValueChange={(val) =>
+                                        setOptimizationWeights({
+                                            ...optimizationWeights,
+                                            solubility: val[0],
+                                        })
+                                    }
+                                />
+                            </div>	
 						</div>
 						<DialogFooter>
-							<Button
-								variant="outline"
-								onClick={() => setShowWeightsDialog(false)}
-							>
-								Cancel
-							</Button>
-							<Button onClick={handleSearch} disabled={isLoading}>
-								{isLoading ? "Processing..." : "Find Compounds"}
-							</Button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowWeightsDialog(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button onClick={handleSearch} disabled={isLoading}>
+                                {isLoading ? "Processing..." : "Find Compounds"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
 				<Separator className="mb-12 opacity-30" />
+                <Separator className="mb-12 opacity-30" />
 
-				<CompoundResults
-					compounds={compounds}
-					isLoading={isLoading}
-					proteinInput={proteinInput}
-					optimizationResponse={optimizationResponse}
-					weights={optimizationWeights}
-				/>
+                {/* Show results when compounds are available */}
+                {compounds.length > 0 && (
+                    <CompoundResults 
+                        compounds={compounds} 
+                        optimizationResponse={optimizationResponse}
+                    />
+                )}
+                {/* Show loading state */}
+                {isLoading && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex flex-col items-center justify-center py-12"
+                    >
+                        <div className="h-12 w-12 rounded-full border-4 border-t-primary animate-spin mb-4"></div>
+                        <p className="text-lg text-muted-foreground">
+                            Processing your request...
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                            This may take a few moments as we compute optimized compounds
+                        </p>
+                    </motion.div>
+                )}
+
+				
 			</motion.div>
 
 			<footer className="py-6">
