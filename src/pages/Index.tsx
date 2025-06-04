@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, Beaker, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import Header from "../components/Header";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  Beaker, Brain, Zap, Target, FlaskConical, 
+  ChartBar, Database, Cpu, Github, ExternalLink 
+} from 'lucide-react';
 
 // Declare 3Dmol to avoid TypeScript errors
 declare global {
@@ -238,6 +243,67 @@ END`;
       window.removeEventListener('load', handleResize);
     };
   }, []);
+
+  const features = [
+    {
+      icon: <FlaskConical className="w-8 h-8" />,  // Changed from Molecule to Flask
+      title: "Molecular Property Prediction",
+      description: "Predicts essential properties like Lipinski's Rule compliance, QED score, and toxicity"
+    },
+    {
+      icon: <Brain className="w-8 h-8" />,
+      title: "RNN-based Molecular Generation",
+      description: "Leveraged our custom-trained RNN model for generating a diverse range of molecules"
+    },
+    {
+      icon: <Target className="w-8 h-8" />,
+      title: "Advanced Toxicity Prediction",
+      description: "Predict toxicity with precision using structural alerts, PAINS patterns, and embedding features from MolFormer"
+    },
+    {
+      icon: <Zap className="w-8 h-8" />,
+      title: "Adaptive Property Optimization",
+      description: "Fine-tune molecular properties with a customizable weighting system for optimal drug design"
+    },
+    {
+      icon: <FlaskConical className="w-8 h-8" />,
+      title: "Protein Structure Analysis",
+      description: "Predicts essential properties like Lipinski's Rule compliance, QED score, and toxicity"
+    },
+    {
+      icon: <ChartBar className="w-8 h-8" />,
+      title: "Interactive Visualisation",
+      description: "Provides visualisation tools for chemical structures and interactions"
+    }
+  ];
+
+  const processSteps = [
+    {
+      title: "Login",
+      description: "User logins/signs up to the MolGenX website and gets redirected to our engine",
+      color: "bg-blue-600"
+    },
+    {
+      title: "Input target Protein",
+      description: "User enters amino acid sequence of the target protein or PDB ID and its type (kinase inhibitor, CNS,etc.)",
+      color: "bg-blue-500"
+    },
+    {
+      title: "Select Filters",
+      description: "Filter out potential drug candidates on the basis of range of druglikeness, toxicity and binding affinity",
+      color: "bg-teal-500"
+    },
+    {
+      title: "Get Ranked Optimized Molecules",
+      description: "Display of the most promosing candidates for further research, along with its predicted properties and 3D structure",
+      color: "bg-teal-400"
+    },
+    {
+      title: "Further Steps for Testing",
+      description: "Upon clicking on a molecule get comprehensive steps for further lab testing and research",
+      color: "bg-purple-400"
+    }
+  ];
   
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
@@ -329,6 +395,87 @@ END`;
           </motion.div>
         </div>
       </main>
+      <motion.section 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7 }}
+        className="py-16"
+      >
+        <div className="container mx-auto px-6">
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Features of the Solution</h2>
+            <p className="text-lg text-gray-600">Explore the innovative features enhancing drug discovery</p>
+          </motion.div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {features.map((feature, index) => (
+                <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 * (index + 1) }}
+                >
+                <Card className="hover:shadow-lg transition-shadow duration-300 border-0 bg-white/80 backdrop-blur h-64 flex flex-col">
+                    <CardContent className="p-6 flex flex-col flex-1">
+                    <div className="flex items-center mb-4">
+                        <div className="p-3 bg-teal-100 rounded-lg mr-4 text-teal-600">
+                        {feature.icon}
+                        </div>
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2 text-gray-800">{feature.title}</h3>
+                    <p className="text-gray-600 text-sm flex-grow">{feature.description}</p>
+                    </CardContent>
+                </Card>
+                </motion.div>
+            ))}
+            </div>
+        </div>
+      </motion.section>
+
+      {/* Process Flow - with animations */}
+      <motion.section 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7 }}
+        className="py-16"
+      >
+        <div className="container mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Process Flow</h2>
+            <p className="text-lg text-gray-600">Step-by-step journey through MolGenX</p>
+          </motion.div>
+          <div className="max-w-4xl mx-auto">
+            <div className="relative">
+              {processSteps.map((step, index) => (
+                <motion.div 
+                  key={index} 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.15 * (index + 1) }}
+                  className="flex items-start mb-8 last:mb-0"
+                >
+                  <div className={`w-12 h-12 rounded-full ${step.color} flex items-center justify-center text-white font-bold text-lg mr-6 flex-shrink-0`}>
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{step.title}</h3>
+                    <p className="text-gray-600">{step.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.section>
       
       {/* Footer */}
       <footer className="py-6">
