@@ -91,23 +91,39 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
         allCompounds.length > 0 ? allCompounds[0] : null
     );
 
-	const viewerRefs = useRef<{[key: string]: boolean}>({});
-    
+	// Store actual viewer references instead of just booleans
+    const viewerRefs = useRef<{[key: string]: any}>({});
+
     // Initialize 3D viewer when selectedCompound changes
     useEffect(() => {
         if (!selectedCompound?.visualData?.models?.pdb) return;
         
         const viewerId = `molecule-viewer-${selectedCompound.id}`;
+        const viewerElement = document.getElementById(viewerId);
         
-        // Check if we already processed this viewer
-        if (viewerRefs.current[viewerId]) return;
+        if (!viewerElement) return;
+        
+        // Always clear the previous content
+        while (viewerElement.firstChild) {
+            viewerElement.removeChild(viewerElement.firstChild);
+        }
+        
+        // Clean up any existing viewer for this ID
+        if (viewerRefs.current[viewerId]) {
+            // Remove existing viewer if any
+            try {
+                viewerRefs.current[viewerId].dispose();
+            } catch (e) {
+                console.log("Could not dispose previous viewer");
+            }
+        }
         
         // Make sure 3Dmol.js is available
         if (window.$3Dmol) {
             try {
-				// Create the viewer for this specific compound
+                // Create the viewer for this specific compound
                 const viewer = window.$3Dmol.createViewer(
-                    document.getElementById(viewerId),
+                    viewerElement,
                     { backgroundColor: 'white' }
                 );
                 
@@ -128,15 +144,28 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
                 
                 // Render the molecule
                 viewer.render();
-				// Mark this viewer as processed
-                viewerRefs.current[viewerId] = true;
+                
+                // Store the actual viewer instance
+                viewerRefs.current[viewerId] = viewer;
             } catch (error) {
                 console.error("Error rendering 3D molecule:", error);
             }
         } else {
             console.error("3Dmol library not loaded");
         }
-    }, [selectedCompound]);
+    
+    // Cleanup function
+    return () => {
+        // This will run when the component unmounts or when selectedCompound changes
+        if (viewerRefs.current[viewerId]) {
+            try {
+                viewerRefs.current[viewerId].dispose();
+            } catch (e) {
+                console.log("Cleanup: Could not dispose viewer");
+            }
+        }
+    };
+}, [selectedCompound]);
                 
 
     return (
@@ -200,168 +229,150 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
                     <div className="lg:col-span-2">
                         {selectedCompound && (
                             <div className="grid grid-cols-1 gap-6">
-                                {/* Compound Properties */}
+                                {/* Compound Name, SMILES, and 2D Structure in one card */}
                                 <Card>
                                     <CardHeader>
                                         <div className="flex justify-between items-center">
-                                            <CardTitle>Compound {selectedCompound.rank} Properties</CardTitle>
-                                            <Badge variant="default">
-                                                Score: {selectedCompound.score.toFixed(2)}
-                                            </Badge>
+                                            <CardTitle>Compound {selectedCompound.rank}</CardTitle>
+                                            <Badge variant="default">Score: {selectedCompound.score.toFixed(2)}</Badge>
                                         </div>
                                     </CardHeader>
-                                    <CardContent>
-                                        <Table>
-                                            <TableBody>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        Name
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {selectedCompound.name}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        SMILES
-                                                    </TableCell>
-                                                    <TableCell className="break-all">
-                                                        {selectedCompound.structure}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        Score
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <span className="font-semibold">
-                                                            {selectedCompound.score.toFixed(2)}
-                                                        </span>
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        Molecular Weight
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {selectedCompound.molecularWeight.toFixed(2)}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        Binding Affinity
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {selectedCompound.binding_affinity.toFixed(4)}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        Druglikeness
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {selectedCompound.likeliness.toFixed(4)}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        Toxicity
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {selectedCompound.toxicity.toFixed(4)}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        Synthetic Accessibility
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {selectedCompound.synthetic_accessibility.toFixed(2)}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        Lipinski Violations
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {selectedCompound.lipinski_violations}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow>
-                                                    <TableCell className="font-medium">
-                                                        Solubility
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {selectedCompound.solubility.toFixed(4)}
-                                                    </TableCell>
-                                                </TableRow>
-                                            </TableBody>
-                                        </Table>
+                                    <CardContent className="space-y-4">
+                                        <div>
+                                            <p className="text-sm text-muted-foreground mb-1">SMILES Structure:</p>
+                                            <code className="font-mono text-xs break-all bg-muted p-2 rounded block">
+                                                {selectedCompound.structure}
+                                            </code>
+                                        </div>                                        
                                     </CardContent>
                                 </Card>
-                                
-                                {/* Compound Explanation */}
-                                {selectedCompound.explanation && (
-                                    <Card>
+
+                                {/* 3D Visualization and Properties side-by-side */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* 3D Visualization */}
+                                    <Card className="h-full">
                                         <CardHeader>
-                                            <CardTitle>Compound Analysis</CardTitle>
+                                            <CardTitle>3D Structure</CardTitle>
                                         </CardHeader>
-                                        <CardContent>
-                                            <p className="whitespace-pre-line">
-                                                {selectedCompound.explanation}
-                                            </p>
+                                        <CardContent className="flex flex-col items-center justify-center">
+                                            {selectedCompound.visualData ? (
+                                                <>
+                                                    <div 
+                                                        id={`molecule-viewer-${selectedCompound.id}`} 
+                                                        style={{ width: '100%', height: '300px', position: 'relative' }}
+                                                    >
+                                                        {/* 3Dmol viewer will render here */}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-2 italic">
+                                                        Click and drag to rotate. Scroll to zoom in and out.
+                                                    </p>
+                                                </>
+                                            ) : (
+                                                <div className="text-center text-muted-foreground">
+                                                    <p>3D visualization not available</p>
+                                                </div>
+                                            )}
                                         </CardContent>
                                     </Card>
-                                )}
 
-								{/* Compound Visualization */}
-								<Card>
-									<CardHeader>
-										<CardTitle>Visualization</CardTitle>
-									</CardHeader>
-									<CardContent className="flex flex-col items-center justify-center">
-										{selectedCompound.visualData ? (
-											<div className="flex flex-col items-center space-y-8">
-												{/* 2D Structure */}
-												<div className="w-full bg-white p-4 rounded-lg">
-													<h3 className="text-sm font-medium mb-2">2D Structure</h3>
-													<img
-														src={selectedCompound.visualData.images["2d"]}
-														alt={`2D structure of ${selectedCompound.name}`}
-														className="max-w-full h-auto mx-auto"
-													/>
-												</div>
+                                    {/* Properties Table */}
+                                    <Card className="h-full">
+                                        <CardHeader>
+                                            <CardTitle>Properties</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-0">
+                                            <Table>
+                                                <TableBody>
+                                                    <TableRow>
+                                                        <TableCell className="font-medium">Molecular Weight</TableCell>
+                                                        <TableCell>{selectedCompound.molecularWeight.toFixed(2)}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell className="font-medium">Binding Affinity</TableCell>
+                                                        <TableCell>{selectedCompound.binding_affinity.toFixed(4)}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell className="font-medium">Druglikeness</TableCell>
+                                                        <TableCell>{selectedCompound.likeliness.toFixed(4)}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell className="font-medium">Toxicity</TableCell>
+                                                        <TableCell>{selectedCompound.toxicity.toFixed(4)}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell className="font-medium">Synthetic Accessibility</TableCell>
+                                                        <TableCell>{selectedCompound.synthetic_accessibility.toFixed(2)}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell className="font-medium">Lipinski Violations</TableCell>
+                                                        <TableCell>{selectedCompound.lipinski_violations}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell className="font-medium">Solubility</TableCell>
+                                                        <TableCell>{selectedCompound.solubility.toFixed(4)}</TableCell>
+                                                    </TableRow>
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                </div>
 
-												    {/* 3D Structure - Simpler approach with direct div */}
-													<div className="w-full bg-white p-4 rounded-lg">
-														<h3 className="text-sm font-medium mb-2">3D Structure</h3>
-														<div 
-															id={`molecule-viewer-${selectedCompound.id}`} 
-															style={{ width: '100%', height: '400px', position: 'relative' }}
-														>
-															{/* This div will be replaced with the 3Dmol viewer by the useEffect */}
-														</div>
-														
-														<p className="text-xs text-muted-foreground mt-2">
-															SMILES: {selectedCompound.structure}
-														</p>
-													</div>
-											</div>
-										) : (
-											<div className="text-center text-muted-foreground">
-												<p>No visualization data available.</p>
-												<p className="text-sm mt-2">
-													Enable 3D visualizations in the search settings to view molecule structures.
-												</p>
-											</div>
-										)}
-									</CardContent>
-								</Card>
-								</div>
-						)}
-					</div>
-				</div>
-				</div>
+                                {/* 2D Visualization and Compound Analysis side-by-side */}
+                                
+                                    {/* Compound Analysis */}
+                                    <Card className="h-full">
+                                        <CardHeader>
+                                            <div className="flex items-center justify-between">
+                                            <CardTitle>Compound Analysis</CardTitle>
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                <span className="flex items-center">Powered by</span>
+                                                <img 
+                                                    src="/Google_Gemini_logo.png" 
+                                                    alt="Gemini" 
+                                                    className="h-[16px] mt-[-8px]" 
+                                                    style={{ verticalAlign: 'middle', display: 'inline-block' }}
+                                                />
+                                            </div>
+                                        </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {selectedCompound.explanation ? (
+                                                <p className="whitespace-pre-line">
+                                                    {selectedCompound.explanation}
+                                                </p>
+                                            ) : (
+                                                <div className="text-center text-muted-foreground">
+                                                    <p>Analysis not available</p>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                    {/* 2D Visualization as separate card */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>2D Structure</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="flex justify-center">
+                                                {selectedCompound.visualData ? (
+                                                    <img
+                                                        src={selectedCompound.visualData.images["2d"]}
+                                                        alt={`2D structure of ${selectedCompound.name}`}
+                                                        className="max-w-full h-auto border rounded-md bg-white p-2"
+                                                    />
+                                                ) : (
+                                                    <div className="text-center text-muted-foreground bg-muted/20 p-8 rounded-md w-full">
+                                                        <p>2D visualization not available</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                            </div>
+                        )}
+                    </div>
+                    </div>
+                    </div>
                                                 
                             
 

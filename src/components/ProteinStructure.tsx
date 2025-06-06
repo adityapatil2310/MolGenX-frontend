@@ -131,23 +131,13 @@ const ProteinStructure: React.FC<ProteinStructureProps> = ({ proteinSequence }) 
   if (!proteinSequence) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="64"
-          height="64"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-muted-foreground/40 mb-4"
-        >
-          <path d="M16 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h2" />
-          <path d="M15 9h5a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-5" />
-          <path d="M9 6h5a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H9" />
-          <path d="M8 13H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v1" />
-        </svg>
+        <img 
+        src="/compound-logo.png"
+        alt="Molecule structure"
+        width="80"
+        height="80"
+        className="mb-4 opacity-70"
+      />
         <h3 className="text-xl font-medium mb-1">No Protein Selected</h3>
         <p className="text-center text-muted-foreground">
           Enter a valid 4-character PDB ID to visualize a protein structure
