@@ -381,6 +381,15 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
                 <Card className="mt-8">
                     <CardHeader>
                         <CardTitle>Overall Analysis</CardTitle>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                <span className="flex items-center">Powered by</span>
+                                                <img 
+                                                    src="/Google_Gemini_logo.png" 
+                                                    alt="Gemini" 
+                                                    className="h-[16px] mt-[-8px]" 
+                                                    style={{ verticalAlign: 'middle', display: 'inline-block' }}
+                                                />
+                                            </span>
                     </CardHeader>
                     <CardContent>
                         <p className="whitespace-pre-line">

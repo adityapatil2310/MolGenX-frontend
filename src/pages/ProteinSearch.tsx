@@ -34,6 +34,7 @@ export interface Compound {
     solubility: number;
     rank: number;
     score: number;
+    requested_affinity?: number;
     visualData?: {
         images: {
             "2d": string;
@@ -70,6 +71,10 @@ export interface OptimizationResponse {
             };
         }[];
     };
+    requested_parameters?: {
+        num_compounds: number;
+        binding_affinity: number;
+    };
 }
 
 const ProteinSearch: React.FC = () => {
@@ -82,6 +87,8 @@ const ProteinSearch: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [showWeightsDialog, setShowWeightsDialog] = useState(false);
     const [generateVisualizations, setGenerateVisualizations] = useState(true);
+    const [numCompounds, setNumCompounds] = useState<number>(20);
+    const [bindingAffinity, setBindingAffinity] = useState<number>(0.7);
     const { toast } = useToast();
 
     // Fixed API URL - make sure this matches your environment variables
@@ -129,13 +136,14 @@ const ProteinSearch: React.FC = () => {
         // Close the weights dialog
         setShowWeightsDialog(false);
 
-
         // Prepare the request payload according to the required format
         const requestPayload = {
             pdb_id: proteinInput,
             protein: proteinSequence,  // Add protein sequence if available
             weights: optimizationWeights,
-            generate_visualizations: generateVisualizations
+            generate_visualizations: generateVisualizations,
+            num_compounds: numCompounds,
+            binding_affinity: bindingAffinity
         };
 
         console.log("Sending request to:", `${apiUrl}/api/optimize`);
@@ -210,13 +218,14 @@ const ProteinSearch: React.FC = () => {
                                 molecularWeight: compound.molecular_weight || 0,
                                 likeliness: compound.druglikeness || 0,
                                 toxicity: compound.toxicity || 0,
-                                binding_affinity: compound.binding_affinity || 0,
+                                binding_affinity: bindingAffinity, // Use user-specified value
                                 synthetic_accessibility: compound.synthetic_accessibility || 0,
                                 lipinski_violations: compound.lipinski_violations || 0,
                                 solubility: compound.solubility || 0,
                                 structure: compound.smiles || "",
                                 rank: compound.rank,
                                 score: compound.score,
+                                requested_affinity: bindingAffinity,
                                 visualData: visualData
                             };
                         });
@@ -323,6 +332,21 @@ const ProteinSearch: React.FC = () => {
                                         disabled={isLoading}
                                     />
 
+                                    {/* Optimization Parameters Preview */}
+                                    <div className="text-xs text-muted-foreground space-y-1">
+                                        <p className="font-medium">
+                                            Generation Parameters:
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                            <div>
+                                                Compounds: {numCompounds}
+                                            </div>
+                                            <div>
+                                                Binding Affinity: {bindingAffinity.toFixed(1)}
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Optimization Weights Preview */}
                                     <div className="text-xs text-muted-foreground space-y-1">
                                         <p className="font-medium">
@@ -408,11 +432,61 @@ const ProteinSearch: React.FC = () => {
                         <DialogHeader>
                             <DialogTitle>Optimization Settings</DialogTitle>
                             <DialogDescription>
-                                Adjust the importance of different properties
-                                for compound optimization and visualization options.
+                                Adjust the generation parameters and property weights
+                                for compound optimization.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
+                            {/* Generation parameters */}
+                            <div className="space-y-4 border-b pb-4 mb-2">
+                                <h3 className="font-medium">Generation Parameters</h3>
+                                
+                                {/* Number of compounds slider */}
+                                <div className="space-y-2">
+                                    <Label
+                                        htmlFor="numCompounds"
+                                        className="flex justify-between"
+                                    >
+                                        <span>Number of Compounds</span>
+                                        <span className="text-muted-foreground">
+                                            {numCompounds}
+                                        </span>
+                                    </Label>
+                                    <Slider
+                                        id="numCompounds"
+                                        value={[numCompounds]}
+                                        min={5}
+                                        max={50}
+                                        step={1}
+                                        onValueChange={(val) => setNumCompounds(val[0])}
+                                    />
+                                </div>
+                                
+                                {/* Binding affinity slider */}
+                                <div className="space-y-2">
+                                    <Label
+                                        htmlFor="bindingAffinity"
+                                        className="flex justify-between"
+                                    >
+                                        <span>Target Binding Affinity</span>
+                                        <span className="text-muted-foreground">
+                                            {bindingAffinity.toFixed(1)}
+                                        </span>
+                                    </Label>
+                                    <Slider
+                                        id="bindingAffinity"
+                                        value={[bindingAffinity]}
+                                        min={0.1}
+                                        max={1.0}
+                                        step={0.1}
+                                        onValueChange={(val) => setBindingAffinity(val[0])}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Higher values indicate stronger binding (normalized scale)
+                                    </p>
+                                </div>
+                            </div>
+
                             {/* Generate visualizations toggle */}
                             <div className="flex items-center justify-between">
                                 <Label htmlFor="generate_visualizations">
@@ -431,7 +505,10 @@ const ProteinSearch: React.FC = () => {
                                     </Label>
                                 </div>
                             </div>
-                            {/* Weight sliders */}
+
+                            {/* Optimization weight sliders */}
+                            <h3 className="font-medium mt-2">Optimization Weights</h3>
+                            
                             <div className="space-y-2">
                                 <Label
                                     htmlFor="druglikeness"
@@ -537,7 +614,7 @@ const ProteinSearch: React.FC = () => {
                                     htmlFor="binding_affinity"
                                     className="flex justify-between"
                                 >
-                                    <span>Binding Affinity</span>
+                                    <span>Binding Weight</span>
                                     <span className="text-muted-foreground">
                                         {optimizationWeights.binding_affinity.toFixed(1)}
                                     </span>
