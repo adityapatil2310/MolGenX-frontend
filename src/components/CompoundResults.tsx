@@ -177,6 +177,8 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
         >
             <div className="flex flex-col gap-8">
                 <h2 className="text-3xl font-bold tracking-tight">Results</h2>
+                <p>Note: Score is an unified number that balances drug-likeness, binding strength, toxicity, synthesis ease, solubility, and Lipinski compliance, used to rank the best drug candidates.</p>
+                
                 <p className="text-muted-foreground">
                     Showing {allCompounds.length} compounds ranked by overall score
                 </p>

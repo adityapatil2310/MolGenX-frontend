@@ -758,7 +758,7 @@ const ProteinSearch: React.FC = () => {
                             Processing your request...
                         </p>
                         <p className="text-sm text-muted-foreground mt-2">
-                            This may take a few moments as we compute optimized compounds
+                            This may take 5-10 minutes as we compute optimized compounds
                         </p>
                     </motion.div>
                 )}
