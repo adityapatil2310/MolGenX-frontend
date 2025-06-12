@@ -393,7 +393,7 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
                                             </span>
                     </CardHeader>
                     <CardContent>
-                        <p className="whitespace-pre-line">
+                        <p className="whitespace-pre-line break-words">
                             {optimizationResponse.explanation}
                         </p>
                     </CardContent>
