@@ -24,7 +24,7 @@ export interface Compound {
     id: string;
     name: string;
     formula: string;
-    molecularWeight: number;
+    molecular_weight: number;
     toxicity: number;
     likeliness: number;
     binding_affinity: number;
@@ -215,7 +215,7 @@ const ProteinSearch: React.FC = () => {
                                 id: compound.rank.toString(),
                                 name: `Compound-${compound.rank}`,
                                 formula: compound.smiles || "",
-                                molecularWeight: compound.molecular_weight || 0,
+                                molecular_weight: compound.molecular_weight || 0,
                                 likeliness: compound.druglikeness || 0,
                                 toxicity: compound.toxicity || 0,
                                 binding_affinity: bindingAffinity, // Use user-specified value

@@ -72,7 +72,7 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
                 name: `Compound-${compound.rank}`,
                 formula: compound.formula || compound.structure,
                 score: compound.score,
-                molecularWeight: compound.molecularWeight,
+                molecularWeight: compound.molecular_weight || 0,
                 likeliness: compound.likeliness,
                 toxicity: compound.toxicity,
                 binding_affinity: compound.binding_affinity,
@@ -412,6 +412,7 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
                                     <TableHead className="w-20">Rank</TableHead>
                                     <TableHead>SMILES</TableHead>
                                     <TableHead className="w-20">Score</TableHead>
+                                    <TableHead className="w-24">MW</TableHead>
                                     <TableHead className="w-24">Druglikeness</TableHead>
                                     <TableHead className="w-20">Toxicity</TableHead>
                                     <TableHead className="w-28">Binding Affinity</TableHead>
@@ -432,6 +433,9 @@ const CompoundResults: React.FC<CompoundResultsProps> = ({
                                         </TableCell>
                                         <TableCell className="font-semibold">
                                             {compound.score.toFixed(2)}
+                                        </TableCell>
+                                        <TableCell> {/* Add this cell */}
+                                            {compound.molecularWeight.toFixed(1)}
                                         </TableCell>
                                         <TableCell>
                                             {compound.likeliness.toFixed(2)}
