@@ -10,6 +10,12 @@ import ProteinInput from "@/components/ProteinInput";
 import { Link } from "react-router-dom";
 import Header from "../components/Header"; 
 import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -107,8 +113,8 @@ const ProteinSearch: React.FC = () => {
     // Sample data for Human Haemoglobin
     const humanHaemoglobinExample = "1HHO"; // PDB ID for Human Haemoglobin
 
-    const fillExampleData = () => {
-        setProteinInput(humanHaemoglobinExample);
+    const fillExampleData = (exampleId: string) => {
+        setProteinInput(exampleId);
     };
 
     const handleSearchButtonClick = () => {
@@ -323,93 +329,151 @@ const ProteinSearch: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
                     <div className="lg:col-span-5">
                         <Card>
-                            <CardContent className="pt-6">
-                                <div className="space-y-4">
-                                    <ProteinInput
-                                        value={proteinInput}
-                                        onChange={setProteinInput}
-                                        onExampleClick={fillExampleData}
-                                        disabled={isLoading}
-                                    />
+                            <CardContent className="pt-6 space-y-4">
+                                <ProteinInput
+                                value={proteinInput}
+                                onChange={setProteinInput}
+                                onExampleClick={fillExampleData}
+                                disabled={isLoading}
+                                />
 
-                                    {/* Optimization Parameters Preview */}
-                                    <div className="text-xs text-muted-foreground space-y-1">
-                                        <p className="font-medium">
-                                            Generation Parameters:
-                                        </p>
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                            <div>
-                                                Compounds: {numCompounds}
-                                            </div>
-                                            <div>
-                                                Binding Affinity: {bindingAffinity.toFixed(1)}
-                                            </div>
+                                {/* Generation Parameters */}
+                                <div className="text-xs text-muted-foreground space-y-2">
+                                <p className="font-medium text-foreground">Generation Parameters: (Hover over the labels for more info)</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                        <span className="font-medium cursor-help underline decoration-dotted">
+                                            Compounds
+                                        </span>
+                                        <p>{numCompounds}</p>
                                         </div>
-                                    </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-xs">
+                                        Number of candidate molecules to generate.
+                                    </TooltipContent>
+                                    </Tooltip>
 
-                                    {/* Optimization Weights Preview */}
-                                    <div className="text-xs text-muted-foreground space-y-1">
-                                        <p className="font-medium">
-                                            Optimization Weights:
-                                        </p>
-                                        <div className="grid grid-cols-3 gap-x-4 gap-y-1">
-                                            <div>
-                                                Druglikeness:{" "}
-                                                {optimizationWeights.druglikeness.toFixed(
-                                                    1
-                                                )}
-                                            </div>
-                                            <div>
-                                                Synth. Access:{" "}
-                                                {optimizationWeights.synthetic_accessibility.toFixed(
-                                                    1
-                                                )}
-                                            </div>
-                                            <div>
-                                                Lipinski:{" "}
-                                                {optimizationWeights.lipinski_violations.toFixed(
-                                                    1
-                                                )}
-                                            </div>
-                                            <div>
-                                                Toxicity:{" "}
-                                                {optimizationWeights.toxicity.toFixed(
-                                                    1
-                                                )}
-                                            </div>
-                                            <div>
-                                                Binding:{" "}
-                                                {optimizationWeights.binding_affinity.toFixed(
-                                                    1
-                                                )}
-                                            </div>
-                                            <div>
-                                                Solubility:{" "}
-                                                {optimizationWeights.solubility.toFixed(
-                                                    1
-                                                )}
-                                            </div>
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                        <span className="font-medium cursor-help underline decoration-dotted">
+                                            Binding Affinity
+                                        </span>
+                                        <p>{bindingAffinity.toFixed(1)}</p>
                                         </div>
-                                    </div>
-
-                                    <Button
-                                        className="w-full"
-                                        onClick={handleSearchButtonClick}
-                                        disabled={
-                                            isLoading ||
-                                            proteinInput.length !== 4
-                                        }
-                                    >
-                                        Find Optimized Compounds
-                                    </Button>
-                                    {error && (
-                                        <p className="text-sm text-red-500">
-                                            {error}
-                                        </p>
-                                    )}
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-xs">
+                                        Desired strength of interaction with the protein (0.1 - 1.0).
+                                    </TooltipContent>
+                                    </Tooltip>
                                 </div>
+                                </div>
+
+                                {/* Optimization Weights */}
+                                <div className="text-xs text-muted-foreground space-y-2">
+                                <p className="font-medium text-foreground">Optimization Weights: (Hover over the properties for more info)</p>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                        <span className="font-medium cursor-help underline decoration-dotted">
+                                            Druglikeness
+                                        </span>
+                                        <p>{optimizationWeights.druglikeness.toFixed(1)}</p>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-xs">
+                                        Measures how “drug-like” the compound is. Higher is better.
+                                    </TooltipContent>
+                                    </Tooltip>
+
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                        <span className="font-medium cursor-help underline decoration-dotted">
+                                            Synth. Access
+                                        </span>
+                                        <p>{optimizationWeights.synthetic_accessibility.toFixed(1)}</p>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-xs">
+                                        Ease of lab synthesis. Lower values are more practical.
+                                    </TooltipContent>
+                                    </Tooltip>
+
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                        <span className="font-medium cursor-help underline decoration-dotted">
+                                            Lipinski
+                                        </span>
+                                        <p>{optimizationWeights.lipinski_violations.toFixed(1)}</p>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-xs">
+                                        Number of violations of drug-likeness rules. ≤1 is preferred.
+                                    </TooltipContent>
+                                    </Tooltip>
+
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                        <span className="font-medium cursor-help underline decoration-dotted">
+                                            Toxicity
+                                        </span>
+                                        <p>{optimizationWeights.toxicity.toFixed(1)}</p>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-xs">
+                                        Predicts harmful side effects. Lower is safer.
+                                    </TooltipContent>
+                                    </Tooltip>
+
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                        <span className="font-medium cursor-help underline decoration-dotted">
+                                            Binding
+                                        </span>
+                                        <p>{optimizationWeights.binding_affinity.toFixed(1)}</p>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-xs">
+                                        Importance of binding affinity in scoring.
+                                    </TooltipContent>
+                                    </Tooltip>
+
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                        <span className="font-medium cursor-help underline decoration-dotted">
+                                            Solubility
+                                        </span>
+                                        <p>{optimizationWeights.solubility.toFixed(1)}</p>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs text-xs">
+                                        Ability to dissolve in water. Higher is better.
+                                    </TooltipContent>
+                                    </Tooltip>
+                                </div>
+                                </div>
+
+                                {/* Button and Error */}
+                                <Button
+                                className="w-full"
+                                onClick={handleSearchButtonClick}
+                                disabled={isLoading || proteinInput.length !== 4}
+                                >
+                                Set Weights & Generate Compounds
+                                </Button>
+
+                                {error && <p className="text-sm text-red-500">{error}</p>}
                             </CardContent>
-                        </Card>
+                            </Card>
+
                     </div>
 
                     <div className="lg:col-span-7">
