@@ -361,7 +361,7 @@ const About = () => {
                 </div>
                 <div className="space-y-2 text-sm">
                   <p>Demo Video: <a href="https://drive.google.com/drive/folders/14kuvroe310znlzt9txlynwtyogwwrihj?usp=sharing" className="text-blue-600 hover:underline">Google Drive Link</a></p>
-                  <p>MVP: <a href="https://molgenx-frontend.pages.dev" className="text-blue-600 hover:underline">https://molgenx-frontend.pages.dev</a></p>
+                  <p>MVP: <a href="https://gdg-25-ee7f1.web.app" className="text-blue-600 hover:underline">https://gdg-25-ee7f1.web.app</a></p>
                 </div>
               </Card>
             </motion.div>
