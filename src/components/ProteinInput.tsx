@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 interface ProteinInputProps {
 	value: string;
 	onChange: (value: string) => void;
-	onExampleClick: () => void;
+	onExampleClick: (exampleId: string) => void;
 	disabled?: boolean;
 }
 
@@ -51,14 +51,41 @@ const ProteinInput: React.FC<ProteinInputProps> = ({
 						</span>
 					)}
 				</p>
+
+			</div>
+			<div className="flex items-center justify-between">
+				<p className="text-xs text-foreground">
+					Try these examples to get started:
+				</p>
+
+			</div>
+			<div className="flex items-center justify-between">
 				<Button
 					variant="outline"
 					size="sm"
-					onClick={onExampleClick}
-					className="text-xs"
+					onClick={() => onExampleClick("1HHO")}
+					className="text-xs px-1.5 py-1"
 					disabled={disabled}
 				>
-					Try Human Haemoglobin (1HHO)
+					Haemoglobin (1HHO)
+				</Button>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => onExampleClick("1M17")}
+					className="text-xs px-1.5 py-1 "
+					disabled={disabled}
+				>
+					EGFR Kinase (1M17)
+				</Button>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => onExampleClick("4RFD")}
+					className="text-xs px-1.5 py-1"
+					disabled={disabled}
+				>
+					Oncoprotein (4RFD)
 				</Button>
 			</div>
 		</div>
