@@ -328,8 +328,8 @@ const About = () => {
                 <h3 className="text-lg font-semibold">Demo & MVP</h3>
               </div>
               <div className="space-y-2 text-sm">
-                <p>Demo Video: <a href="https://drive.google.com/drive/folders/14kuvroe310znlzt9txly nwtyogwwrihj?usp=sharing" className="text-blue-600 hover:underline">Google Drive Link</a></p>
-                <p>MVP: <a href="https://molgenx-frontend.pages.dev" className="text-blue-600 hover:underline">https://molgenx-frontend.pages.dev</a></p>
+                <p>Demo Video: <a href="https://drive.google.com/file/d/14ZjVdkOlLCngCPBnRdwyZ_69C7kztQIs/view?usp=sharing" className="text-blue-600 hover:underline">Google Drive Link</a></p>
+                <p>MVP: <a href="https://gdg-25-ee7f1.web.app" className="text-blue-600 hover:underline">https://gdg-25-ee7f1.web.app</a></p>
               </div>
             </Card>
           </div>
