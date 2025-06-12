@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, Loader2 } from "lucide-react";
 import Header from "../components/Header";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle,  } from '@/components/ui/card';
+
 import { 
-  Beaker, Brain, Zap, Target, FlaskConical, 
-  ChartBar, Database, Cpu, Github, ExternalLink 
+  FlaskConical, Brain, Zap, Target, ChartBar, Database, 
+  CheckCircle, Dna, Scale, Shuffle, Network, Microscope,
+  Workflow, BarChart3, PieChart, Beaker
 } from 'lucide-react';
 
 // Declare 3Dmol to avoid TypeScript errors
@@ -244,6 +246,62 @@ END`;
     };
   }, []);
 
+  const uniqueSellingPoints = [
+      {
+        icon: <Dna className="w-8 h-8" />,
+        title: "Protein-Conditional Molecule Generation",
+        description: "Goes beyond traditional virtual screening by using a conditional RNN to generate novel molecules tailored to specific protein targets—no library limitations"
+      },
+      {
+        icon: <Scale className="w-8 h-8" />,
+        title: "Balanced Property Optimization",
+        description: "The system doesn't just optimize for binding affinity but considers the full spectrum of drug-like properties using a customizable weighting system"
+      },
+      {
+        icon: <Shuffle className="w-8 h-8" />,
+        title: "Dynamic Molecular Variant Generation",
+        description: "Strategically generates variants of promising candidates to expand chemical space intelligently—far beyond random sampling"
+      },
+      {
+        icon: <ChartBar className="w-8 h-8" />,
+        title: "Visualization and Explanation Tools",
+        description: "Delivers 2D/3D visualizations of optimized drug candidates, with intuitive result explanations powered by Gemini, and clear guidance on next steps"
+      },
+      {
+        icon: <Workflow className="w-8 h-8" />,
+        title: "End-to-End AI Pipeline",
+        description: "Covers everything from molecule generation to optimization and validation"
+      },
+      {
+        icon: <BarChart3 className="w-8 h-8" />,
+        title: "Optimized Score",
+        description: "A unified score that balances drug-likeness, binding strength, toxicity, synthesis ease, solubility, and Lipinski compliance to rank the best drug candidates"
+      }
+  ];
+
+  const impactMetrics = [
+    {
+      icon: <Zap className="w-6 h-6" />,
+      text: "Automates candidate generation and optimization to significantly reduce early stage design time by upto 60%"
+    },
+    {
+      icon: <Target className="w-6 h-6" />,
+      text: "Minimizes costly trial-and-error through comprehensive in-silico evaluations"
+    },
+    {
+      icon: <CheckCircle className="w-6 h-6" />,
+      text: "Prioritizes only top 5-10% most promising molecules for wet lab synthesis"
+    },
+    {
+      icon: <Brain className="w-6 h-6" />,
+      text: "Reduces downstream clinical trial failure risk by ~30%"
+    },
+    {
+      icon: <Database className="w-6 h-6" />,
+      text: "Explores a broader chemical space by modifying top candidates for increased variety"
+    }
+  ];
+
   const features = [
     {
       icon: <FlaskConical className="w-8 h-8" />,  // Changed from Molecule to Flask
@@ -395,87 +453,140 @@ END`;
           </motion.div>
         </div>
       </main>
-      <motion.section 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7 }}
-        className="py-16"
-      >
-        <div className="container mx-auto px-6">
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Features of the Solution</h2>
-            <p className="text-lg text-gray-600">Explore the innovative features enhancing drug discovery</p>
-          </motion.div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {features.map((feature, index) => (
-                <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 * (index + 1) }}
-                >
-                <Card className="hover:shadow-lg transition-shadow duration-300 border-0 bg-white/80 backdrop-blur h-64 flex flex-col">
-                    <CardContent className="p-6 flex flex-col flex-1">
-                    <div className="flex items-center mb-4">
-                        <div className="p-3 bg-teal-100 rounded-lg mr-4 text-teal-600">
-                        {feature.icon}
-                        </div>
-                    </div>
-                    <h3 className="font-semibold text-lg mb-2 text-gray-800">{feature.title}</h3>
-                    <p className="text-gray-600 text-sm flex-grow">{feature.description}</p>
-                    </CardContent>
-                </Card>
-                </motion.div>
-            ))}
-            </div>
-        </div>
-      </motion.section>
 
-      {/* Process Flow - with animations */}
-      <motion.section 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7 }}
-        className="py-16"
+      {/* Problem & Solution Overview */}
+<section className="py-16">
+  <div className="container mx-auto px-6">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.7 }}
+      className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto"
+    >
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.7, delay: 0.2 }}
       >
-        <div className="container mx-auto px-6">
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Process Flow</h2>
-            <p className="text-lg text-gray-600">Step-by-step journey through MolGenX</p>
-          </motion.div>
-          <div className="max-w-4xl mx-auto">
-            <div className="relative">
-              {processSteps.map((step, index) => (
+        <Card className="border-l-4 border-l-red-500">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-700">Problem at Hand</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="font-semibold">Conventional drug discovery is:</p>
+            <ul className="space-y-2 text-gray-700">
+              <li>• <strong>Time-consuming</strong> and <strong>expensive</strong></li>
+              <li>• Average drug takes <strong>10-15 years</strong> and <strong>$2.6 billion</strong> to reach market</li>
+              <li>• <strong>Inefficient</strong> with high failure rates</li>
+              <li>• Over <strong>90%</strong> of drug candidates fail in clinical trials</li>
+            </ul>
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm font-medium">Due to:</p>
+              <ul className="text-sm text-gray-600 mt-2">
+                <li>• Complex biological interactions</li>
+                <li>• Molecular interactions are highly nonlinear and context-specific</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.7, delay: 0.4 }}
+      >
+        <Card className="border-l-4 border-l-teal-500">
+          <CardHeader>
+            <CardTitle className="text-2xl text-teal-700">How MolGenX Helps</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="font-semibold">Our comprehensive Generative AI drug discovery platform addresses these issues:</p>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3 bg-teal-50 p-3 rounded-lg">
+                <div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">vs</div>
+                <div>
+                  <p className="font-medium text-teal-800">MolGenX - Gen AI Platform</p>
+                  <p className="text-sm text-gray-600">Targeted Search → Faster and Better Discovery</p>
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700">
+              It intelligently <strong>balances key pharmaceutical properties</strong> like drug-likeness, 
+              toxicity, and solubility.
+            </p>
+            <div className="grid md:grid-cols-2 gap-6">
+              {impactMetrics.map((metric, index) => (
                 <motion.div 
                   key={index} 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.15 * (index + 1) }}
-                  className="flex items-start mb-8 last:mb-0"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 + (index * 0.1) }}
+                  className="flex items-start space-x-3"
                 >
-                  <div className={`w-12 h-12 rounded-full ${step.color} flex items-center justify-center text-white font-bold text-lg mr-6 flex-shrink-0`}>
-                    {index + 1}
+                  <div className="p-2 bg-teal-100 rounded-full text-teal-600 flex-shrink-0">
+                    {metric.icon}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{step.title}</h3>
-                    <p className="text-gray-600">{step.description}</p>
-                  </div>
+                  <p className="text-gray-700 text-sm">{metric.text}</p>
                 </motion.div>
               ))}
             </div>
-          </div>
-        </div>
-      </motion.section>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
+  </div>
+</section>          
+
+{/* Why MolGenX is Effective */}
+<section className="py-16 bg-gradient-to-r from-blue-50 to-teal-50">
+  <div className="container mx-auto px-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="text-center mb-12"
+    >
+      <h2 className="text-3xl font-bold text-gray-800 mb-4">Why are we a Game Changer in Drug Discovery?</h2>
+      <p className="text-lg text-gray-600">You can use it even if don't have  ML or HPC expertise</p>
+    </motion.div>
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
+      {uniqueSellingPoints.map((point, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ 
+            duration: 0.5, 
+            delay: 0.2 + (index * 0.1), 
+            ease: "easeOut" 
+          }}
+        >
+          <Card className="hover:shadow-lg transition-shadow duration-300 border-0 bg-white/80 backdrop-blur h-full">
+            <CardContent className="p-6">
+              <motion.div 
+                initial={{ y: -5 }}
+                animate={{ y: 0 }}
+                transition={{
+                  duration: 0.5,
+                  delay: 0.5 + (index * 0.1),
+                  ease: "easeOut"
+                }}
+                className="flex items-center mb-4"
+              >
+                <div className="p-3 bg-teal-100 rounded-lg mr-4 text-teal-600">
+                  {point.icon}
+                </div>
+              </motion.div>
+              <h3 className="font-semibold text-lg mb-2 text-gray-800">{point.title}</h3>
+              <p className="text-gray-600 text-sm">{point.description}</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      ))}
+    </div>
+  </div>
+</section>
       
       {/* Footer */}
       <footer className="py-6">
